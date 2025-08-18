@@ -18,8 +18,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.set("view engine", "ejs");
+app.set("views", path.join(process.cwd(), "views"));
+
+// Dashboard Route
 app.get("/", (req, res) => {
-  res.send("Hello, I am a Server");
+  res.render("dashboard");
+});
+
+// Example endpoints
+// app.get("/admin/team", (req, res) => res.send("Teams Endpoint"));
+// app.get("/admin/projects", (req, res) => res.send("Projects Endpoint"));
+// app.get("/admin/pm", (req, res) => res.send("PM Endpoint"));
+// app.get("/user/signup", (req, res) => res.send("Signup Endpoint"));
+
+app.get("/", (req, res) => {
+  res.send("Hello, I am a Server"); 
 });
 
 app.use("/", indexRoute);
