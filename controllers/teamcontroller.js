@@ -1,9 +1,10 @@
+const { default: mongoose } = require('mongoose');
 const Team = require('../models/teamModel');
 const User = require("../models/userModel");
 
 const TeamController = {};
 
-// ✅ Get Teams
+
 TeamController.teamGet = async (req, res) => {
   try {
     const teams = await Team.find()
@@ -14,10 +15,9 @@ TeamController.teamGet = async (req, res) => {
   }
 };
 
-// ✅ Create Team
 TeamController.createteamPost = async (req, res) => {
   try {
-    const { teamName, teamLeader, members, field } = req.validatedData;
+    const { teamName, members, field } = req.validatedData;
 
     // Check if team name already exists
     const existingTeam = await Team.findOne({ teamName });
@@ -28,25 +28,33 @@ TeamController.createteamPost = async (req, res) => {
       });
     }
 
-    // Check if team leader exists
-    const leaderDoc = await User.findById(teamLeader);
-    if (!leaderDoc) {
+    // Validate members (check if users exist)
+    const userIds = members.map(m => new mongoose.Types.ObjectId(m.user));
+    const validUsers = await User.find({ _id: { $in: userIds } });
+
+    if (validUsers.length !== members.length) {
       return res.status(400).json({
-        field: "teamLeader",
-        message: "Invalid team leader ID",
+        field: "members",
+        message: "Some user IDs are invalid",
       });
     }
 
-    // Validate members
-    let members_id = Array.isArray(members) ? members : [];
-    const validMembers = await User.find({ _id: { $in: members_id } });
-    members_id = validMembers.map((user) => user._id);
+    // Ensure exactly one Team Leader
+    const leaders = members.filter(m => m.role === "Team Leader");
+    if (leaders.length !== 1) {
+      return res.status(400).json({
+        field: "members",
+        message: "Team must have exactly one Team Leader",
+      });
+    }
 
     // Create team
     await Team.create({
       teamName,
-      teamLeader,
-      members: members_id,
+      members: members.map(m => ({
+        user: new mongoose.Types.ObjectId(m.user),
+        role: m.role
+      })),
       field,
     });
 
@@ -58,11 +66,17 @@ TeamController.createteamPost = async (req, res) => {
 };
 
 
-// ✅ Update Team
+TeamController.fields = async (req, res) => {
+  const fieldEnumValues = Team.schema.path("field").enumValues;
+  res.json(fieldEnumValues);
+}
+
 TeamController.updateteam = async (req, res) => {
   try {
     const { id } = req.params;
-    const { teamName, members, field } = req.body;
+    const { teamName, members, field } = req.validatedData;
+
+
 
     const leaderCount = members.filter(m => m.role === "Team Leader").length;
     if (leaderCount !== 1) {
@@ -73,6 +87,8 @@ TeamController.updateteam = async (req, res) => {
     const validUsers = await User.find({ _id: { $in: userIds } });
     if (validUsers.length !== userIds.length) {
       return res.status(400).json({ message: "Invalid user IDs in members" });
+
+ 
     }
 
     await Team.findByIdAndUpdate(id, { teamName, members, field }, { new: true });
@@ -82,7 +98,6 @@ TeamController.updateteam = async (req, res) => {
   }
 };
 
-// ✅ Delete Team
 TeamController.deleteteam = async (req, res) => {
   try {
     const { id } = req.params;
