@@ -1,10 +1,9 @@
 const Project = require("../models/projectModel");
-// const Team = require("../models/teamtModel");
 ProjectController = {}
 
 
 ProjectController.getProjects = async (req, res) => {
-    // const {teamName} = 
+  
   try {
     const project = await Project.find().populate("teamName","teamName").populate("PM" , "name")
     res.json(project);
@@ -33,7 +32,7 @@ ProjectController.projectPost = async (req, res) => {
     }
 
 
-    // Create team
+    // Create project
     await Project.create({
       title,
       description,
