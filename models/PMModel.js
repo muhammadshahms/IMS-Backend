@@ -7,7 +7,12 @@ const PMSchema = new mongoose.Schema({
     role: {
         type: String,
     },
-    projects: [String],
+
+    project: 
+       { type:mongoose.Schema.Types.ObjectId,
+        ref:"project"
+       }
+,
     createdAt: {
         type: Date,
         default: Date.now

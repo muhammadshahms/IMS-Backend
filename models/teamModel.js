@@ -28,9 +28,12 @@ const teamSchema = new mongoose.Schema(
       type: String,
       enum: ["Web Development", "Graphic Designing", "Digital Marketing"],
       required: true
-    }
-  },
-  { timestamps: true }
-);
+    },
+
+    project:{
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "project",
+  }
+});
 
 module.exports = mongoose.model("team", teamSchema);

@@ -4,8 +4,10 @@ const postController = require("../controllers/postcontroller");
 const upload = require("../config/multerconfig");
 const PMcontroller = require("../controllers/PMcontroller");
 const { TeamController } = require("../controllers/teamcontroller");
+const { ProjectController } = require("../controllers/projectcontroller");
 const validate = require("../middlewares/FormValidator")
 const { TeamSchema, UpdateTeamSchema } = require("../validators/teamvalidations");
+const { ProjectSchema } = require("../validators/ProjectValidations");
 
 //admin access posts
 router.post("/post", upload.single('image'), postController.createPost)
@@ -25,6 +27,9 @@ router.post("/createteam", validate(TeamSchema), TeamController.createteamPost)
 router.delete("/team/:id", TeamController.deleteteam);
 router.put("/team/:id", validate(UpdateTeamSchema), TeamController.updateteam);
 router.get("/team/fields", TeamController.fields);
+
+router.get("/project", ProjectController.getProjects)
+router.post("/createproject", validate(ProjectSchema), ProjectController.projectPost)
 
 
 module.exports = router;
