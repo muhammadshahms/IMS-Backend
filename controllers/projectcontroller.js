@@ -47,4 +47,46 @@ ProjectController.projectPost = async (req, res) => {
   }
 };
 
+ProjectController.updateProject = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, teamName, PM } = req.validatedData;
+
+    // let imagePath = existingImage;
+
+    // if a new file is uploaded, replace the image
+    // if (req.file) {
+    //   imagePath = `/images/${req.file.filename}`;
+
+    //   // Delete old image if exists and not same as default
+    //   if (existingImage && fs.existsSync(path.join(__dirname, `../public${existingImage}`) )) {
+    //     fs.unlinkSync(path.join(__dirname, `../public${existingImage}`));
+    //   }
+    // }
+
+    await Project.findByIdAndUpdate(id, {
+      title,
+      description,
+      teamName,
+      PM
+    });
+
+    res.status(200).json({ message: "Project updated successfully" });
+  } catch (error) {
+    console.error("Error updating project:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+ProjectController.deleteProject = async (req, res) => {
+    try {
+        const { id } = req.params
+        await Project.findByIdAndDelete(id)
+        res.status(200).json({ message: "Project deleted successfully" })
+    } catch (error) {
+        console.error("Error deleting Project:", error);
+        return res.status(500).json({ message: "Server Error" });
+    }
+}
+
 module.exports = { ProjectController };
