@@ -16,7 +16,7 @@ ProjectController.projectPost = async (req, res) => {
   try {
     const { title, description, teamName, PM } = req.validatedData;
 
-    const imagePath = `/uploads/${req.file.filename}`;
+    // const imagePath = `/uploads/${req.file.filename}`;
 
     // Check if team name already exists
     const existingTeam = await Project.findOne({ teamName });
@@ -38,7 +38,7 @@ ProjectController.projectPost = async (req, res) => {
     await Project.create({
       title,
       description,
-      file: imagePath,
+      // file: imagePath,
       teamName,
       PM
     });
