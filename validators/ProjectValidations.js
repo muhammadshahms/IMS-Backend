@@ -9,7 +9,7 @@ const ProjectSchema = z.object({
 });
 
 const UpdateProjectSchema = z.object({
-  title: z.string().min(20, "Title is required"),
+  title: z.string().min(5, "Title is required"),
   description: z.string().min(100, "Description  is required"),
   teamName: z.string().min(1, "Please choose a team"),
   PM: z.string().min(1, "Please choose a project manager"),

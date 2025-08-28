@@ -7,7 +7,7 @@ const { TeamController } = require("../controllers/teamcontroller");
 const { ProjectController } = require("../controllers/projectcontroller");
 const validate = require("../middlewares/FormValidator")
 const { TeamSchema, UpdateTeamSchema } = require("../validators/teamvalidations");
-const { ProjectSchema } = require("../validators/ProjectValidations");
+const { ProjectSchema, UpdateProjectSchema } = require("../validators/ProjectValidations");
 
 //admin access posts
 router.post("/post", upload.single('image'), postController.createPost)
@@ -30,6 +30,8 @@ router.get("/team/fields", TeamController.fields);
 
 router.get("/project", ProjectController.getProjects)
 router.post("/createproject", validate(ProjectSchema), ProjectController.projectPost)
+router.put("/project/:id", validate(UpdateProjectSchema), ProjectController.updateProject)
+router.delete("/project/:id", ProjectController.deleteProject)
 
 
 module.exports = router;
