@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
     CNIC: String,
     course:{
         type : String,
-        enum : ["Web Development" , "Graphicn Designing" , "Digital Marketing",],
+        enum : ["Web Development" , "Graphic Designing" , "Digital Marketing"],
         required:true,
     },
     team:{

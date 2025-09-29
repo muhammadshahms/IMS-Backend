@@ -39,6 +39,17 @@ authController.signupPost = async (req, res) => {
   }
 };
 
+authController.getCourses = async (req, res) => {
+  try {
+    const enumValues = userModel.schema.path("course").enumValues;
+    return res.status(200).json(enumValues);
+  } catch (error) {
+    console.error("Error fetching course enums:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+
+}
+
 authController.signupGet = async (req, res) => {
   try {
     const users = await userModel.find()
@@ -52,11 +63,8 @@ authController.loginPost = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await userModel.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid Email or Password' });
-    }
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    if (!user || !isMatch) {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
     const token = UsertokenGenerator(user)
