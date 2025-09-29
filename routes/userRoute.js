@@ -11,5 +11,6 @@ router.post("/login", authController.loginPost)
 router.get("/logout", authController.logout)
 router.put("/update/:_id", validate(updateRegisterSchema), authController.updateUser)
 router.delete("/delete/:_id", authController.deleteUser)
+router.get("/course", authController.getCourses)
 
 module.exports = router;
