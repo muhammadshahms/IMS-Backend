@@ -20,7 +20,7 @@ const AttSchema = mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Present', 'Absent',
+    enum: ['Present', 'Absent'],
     default: 'Absent'
   },
 })
