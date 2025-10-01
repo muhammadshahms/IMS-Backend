@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const indexRoute = require("./routes/indexRoute");
+const Half_day_checker = require('./cron/Half_day_checker');
 require("dotenv").config();
 require("./config/db")();
 const path = require('path');
@@ -41,3 +42,6 @@ app.use("/", indexRoute);
 app.listen(3000, () => {
   console.log("Server is running on port 3000");
 });
+
+
+Half_day_checker()
