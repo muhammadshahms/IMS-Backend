@@ -19,6 +19,7 @@ router.delete("/delete/:_id", authController.deleteUser)
 router.get("/course", authController.getCourses)
 router.post("/checkin/:_id", attController.checkin)
 router.post("/checkout/:_id", attController.checkout)
+router.get("/status", attController.getAllUserStatus)
 
 
 module.exports = router;
