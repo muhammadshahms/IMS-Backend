@@ -1,16 +1,17 @@
 const express = require("express");
 const cors = require("cors");
 const indexRoute = require("./routes/indexRoute");
-const Half_day_checker = require('./cron/Half_day_checker');
+const Half_day_checker = require("./cron/Half_day_checker");
 require("dotenv").config();
 require("./config/db")();
 const path = require('path');
+const cookieParser = require("cookie-parser");
 
 
 
 const app = express();
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
-
+app.use(cookieParser())
 app.use(cors({
   origin: [process.env.FRONTEND_URL, process.env.LOCALHOST_URL, process.env.USER_URL],
   credentials: true,

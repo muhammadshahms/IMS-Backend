@@ -1,4 +1,4 @@
-const cron = require('node-cron');
+const cron = require("node-cron");
 const Attendance = require("../models/AttModel");
 const userModel = require("../models/userModel");
 
