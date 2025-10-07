@@ -1,9 +1,9 @@
 const Att = require("../models/AttModel");
 const userModel = require("../models/userModel");
 
-AttController = {}
+attController = {}
 
-AttController.checkin = async (req, res) => {
+attController.checkin = async (req, res) => {
     try {
         const { _id } = req.params;
         let user = await userModel.findById(_id);
@@ -50,7 +50,7 @@ AttController.checkin = async (req, res) => {
     }
 }
 
-AttController.checkout = async (req, res) => {
+attController.checkout = async (req, res) => {
     try {
         const { _id } = req.params;
         let user = await userModel.findById(_id);
@@ -91,4 +91,42 @@ AttController.checkout = async (req, res) => {
 }
 
 
-module.exports = AttController
+
+attController.getAllUserStatus = async (req, res) => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+  
+      // ✅ Step 1: Get all users
+      const users = await userModel.find().lean();
+  
+      // ✅ Step 2: For each user, find today's attendance
+      const userStatuses = await Promise.all(
+        users.map(async (user) => {
+          const attendance = await Att.findOne({
+            user: user._id,
+            date: today
+          }).lean();
+  
+          return {
+            _id: user._id,
+            name: user.name,
+            bq_id: user.bq_id,
+            email: user.email,
+            phone: user.phone,
+            CNIC: user.CNIC,
+            course: user.course,
+            status: attendance ? attendance.status : "Absent"  // 👈 Default absent if no check-in
+          };
+        })
+      );
+  
+      res.json(userStatuses);
+    } catch (error) {
+      console.error("Error fetching statuses:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  };
+
+
+module.exports = attController

@@ -68,7 +68,18 @@ authController.loginPost = async (req, res) => {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
     const token = UsertokenGenerator(user)
-    res.status(200).json({ message: 'Login successful', token });
+    res.cookie("token", token, {
+      httpOnly: true,      // 🚫 JS can't access cookie (more secure)
+      secure: false,       // ⚠️ true if using HTTPS
+      sameSite: "lax",     
+      maxAge: 1 * 60 * 60 * 1000, // 1 hour
+    })
+
+    // ✅ You can send user info separately if needed
+    res.status(200).json({
+      message: "Login successful",
+      user: { id: user._id, email: user.email, name: user.name },
+    })
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Server Error' });
