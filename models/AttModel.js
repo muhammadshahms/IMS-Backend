@@ -21,7 +21,7 @@ const AttSchema = mongoose.Schema({
   status: {
     type: String,
     enum: ['Present', 'Absent','Late','Half day'],
-    default: 'Absent'
+    default: 'N/A'
   },
 })
 

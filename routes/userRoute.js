@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authcontroller")
-const attController = require("../controllers/attcontroller")
+const attController = require("../controllers/attendanceController")
 const validate = require("../middlewares/FormValidator")
 const { registerSchema, updateRegisterSchema } = require("../validators/authvalidations");
 const { protect } = require("../middlewares/auth");
@@ -17,9 +17,7 @@ router.get("/logout", authController.logout)
 router.put("/update/:_id", validate(updateRegisterSchema), authController.updateUser)
 router.delete("/delete/:_id", authController.deleteUser)
 router.get("/course", authController.getCourses)
-router.post("/checkin/:_id", attController.checkin)
-router.post("/checkout/:_id", attController.checkout)
-router.get("/status", attController.getAllUserStatus)
+
 
 
 module.exports = router;

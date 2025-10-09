@@ -34,10 +34,6 @@ app.get("/", (req, res) => {
 // app.get("/admin/pm", (req, res) => res.send("PM Endpoint"));
 // app.get("/user/signup", (req, res) => res.send("Signup Endpoint"));
 
-app.get("/", (req, res) => {
-  res.send("Hello, I am a Server"); 
-});
-
 app.use("/", indexRoute);
 
 app.listen(3000, () => {
