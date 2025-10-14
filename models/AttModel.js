@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const AttSchema = mongoose.Schema({
      user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: 'user',
     required: true
   },
   date: {
@@ -21,7 +21,7 @@ const AttSchema = mongoose.Schema({
   status: {
     type: String,
     enum: ['Present', 'Absent','Late','Half day'],
-    default: 'N/A'
+    default: 'Absent'
   },
 })
 

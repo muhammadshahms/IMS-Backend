@@ -69,37 +69,37 @@ attendanceController.checkout = async (req, res) => {
 
 // ✅ 3. Get Single User's Today's Status
 attendanceController.getAttendanceStatus = async (req, res) => {
-    try {
-      const { _id } = req.params; // userId route mein bhejna hoga
-      if (!_id) {
-        return res.status(400).json({ error: "User ID is required" });
-      }
-  
-      const user = await User.findById(_id);
-      if (!user) return res.status(404).json({ error: "User not found" });
-  
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-  
-      const attendance = await Att.findOne({ user: _id, date: today });
-      if (!attendance) {
-        return res.json({
-          status: "N/A",
-          checkInTime: null,
-          checkOutTime: null,
-        });
-      }
-  
-      res.json({
-        status: attendance.status,
-        checkInTime: attendance.checkInTime,
-        checkOutTime: attendance.checkOutTime,
-      });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Internal Server Error" });
+  try {
+    const { _id } = req.params; // userId route mein bhejna hoga
+    if (!_id) {
+      return res.status(400).json({ error: "User ID is required" });
     }
-  };
+
+    const user = await User.findById(_id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const attendance = await Att.findOne({ user: _id, date: today });
+    if (!attendance) {
+      return res.json({
+        status: "N/A",
+        checkInTime: null,
+        checkOutTime: null,
+      });
+    }
+
+    res.json({
+      status: attendance.status,
+      checkInTime: attendance.checkInTime,
+      checkOutTime: attendance.checkOutTime,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
 
 // ✅ 4. Get All Users' Today's Status
 attendanceController.getAllUserStatus = async (req, res) => {
@@ -139,28 +139,35 @@ attendanceController.getAllUserStatus = async (req, res) => {
 attendanceController.getAttendanceHistory = async (req, res) => {
   try {
     const records = await Att.find()
-      .populate("user", "name email")
+      .populate("user", "name email") // 👈 Ensure `user` field is ObjectId ref
       .sort({ date: -1 });
+
     res.json(records);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+``
 
-// ✅ 6. Get Specific User History
-attendanceController.getUserHistory = async (req, res) => {
+// ✅ 6. Get Specific User History By Name
+attendanceController.getUserHistoryByName = async (req, res) => {
   try {
-    const { _id } = req.params;
-    const user = await User.findById(_id);
-    if (!user) return res.status(400).json({ error: "User not found" });
+    const { name } = req.params;
 
-    const records = await Att.find({ user: _id }).sort({ date: -1 });
+    // 👇 Case-insensitive name search
+    const user = await User.findOne({ name: { $regex: new RegExp(name, "i") } });
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+
     res.json({
       user: {
         _id: user._id,
         name: user.name,
         email: user.email,
+        banoqabilId: user.bq_id,
       },
       history: records,
     });
@@ -170,6 +177,26 @@ attendanceController.getUserHistory = async (req, res) => {
   }
 };
 
+attendanceController.getUserHistoryById = async (req, res) => {
+  try {
+    const { id } = req.params
+    const user = await User.findOne({ _id: id })
+    if (!user) return res.status(404).json({ error: "User not found" });
+    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+    res.json({
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        banoqabilId: user.bq_id,
+      },
+      history: records,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+}
 // ✅ 7. Update Attendance Record (Admin use)
 attendanceController.updateAttendanceRecord = async (req, res) => {
   try {
