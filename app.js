@@ -13,7 +13,9 @@ const app = express();
 app.use('/images', express.static(path.join(__dirname, 'public/images')));
 app.use(cookieParser())
 app.use(cors({
-  origin: [process.env.FRONTEND_URL, process.env.LOCALHOST_URL, process.env.USER_URL],
+  origin: "*",
+  //  [process.env.FRONTEND_URL, process.env.LOCALHOST_URL, process.env.USER_URL]
+   
   credentials: true,
 }));
 
