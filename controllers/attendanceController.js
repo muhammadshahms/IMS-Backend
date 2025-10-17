@@ -22,7 +22,7 @@ attendanceController.checkin = async (req, res) => {
     }
 
     if (!att) {
-      att = new Att({
+      att = await Att.create({
         user: _id,
         date,
         checkInTime: now,
