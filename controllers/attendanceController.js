@@ -11,12 +11,20 @@ attendanceController.checkin = async (req, res) => {
     if (!user) return res.status(400).json({ error: "User not found" });
 
     const now = new Date();
-    const date = new Date(now);
-    date.setHours(0, 0, 0, 0);
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
     const fourPM = new Date(now);
     fourPM.setHours(16, 0, 0, 0);
 
-    let att = await Att.findOne({ user: _id, date });
+    // find today's attendance (based on createdAt timestamp)
+    let att = await Att.findOne({
+      user: _id,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
     }
@@ -24,16 +32,15 @@ attendanceController.checkin = async (req, res) => {
     if (!att) {
       att = await Att.create({
         user: _id,
-        date,
         checkInTime: now,
         status: now < fourPM ? "Present" : "Late",
       });
     } else {
       att.checkInTime = now;
       att.status = now < fourPM ? "Present" : "Late";
+      await att.save();
     }
 
-    await att.save();
     res.json({ message: "Check-in successful", att });
   } catch (err) {
     console.error(err);
@@ -49,10 +56,16 @@ attendanceController.checkout = async (req, res) => {
     if (!user) return res.status(400).json({ error: "User not found" });
 
     const now = new Date();
-    const date = new Date(now);
-    date.setHours(0, 0, 0, 0);
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
 
-    let att = await Att.findOne({ user: _id, date });
+    let att = await Att.findOne({
+      user: _id,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
     if (!att) return res.status(400).json({ error: "Not checked in today" });
     if (att.checkOutTime)
       return res.status(400).json({ error: "Already checked out" });
@@ -70,18 +83,22 @@ attendanceController.checkout = async (req, res) => {
 // ✅ 3. Get Single User's Today's Status
 attendanceController.getAttendanceStatus = async (req, res) => {
   try {
-    const { _id } = req.params; // userId route mein bhejna hoga
-    if (!_id) {
-      return res.status(400).json({ error: "User ID is required" });
-    }
+    const { _id } = req.params;
+    if (!_id) return res.status(400).json({ error: "User ID is required" });
 
     const user = await User.findById(_id);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
 
-    const attendance = await Att.findOne({ user: _id, date: today });
+    const attendance = await Att.findOne({
+      user: _id,
+      createdAt: { $gte: startOfDay, $lte: endOfDay }
+    });
+
     if (!attendance) {
       return res.json({
         status: "N/A",

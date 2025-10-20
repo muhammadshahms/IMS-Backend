@@ -1,15 +1,15 @@
 const mongoose = require("mongoose");
 
 const AttSchema = mongoose.Schema({
-     user: {
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'user',
     required: true
   },
-  date: {
-    type: Date,
-    required: true
-  },
+  // date: {
+  //   type: Date,
+  //   required: true
+  // },
   checkInTime: {
     type: Date,
     default: null
@@ -20,11 +20,11 @@ const AttSchema = mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Present', 'Absent','Late','Half day'],
+    enum: ['Present', 'Absent', 'Late', 'Half day'],
     default: 'Absent'
-  },
-})
+  }
+}, { timestamps: true });
 
-AttSchema.index({user:1,date:1},{unique:true})
+AttSchema.index({ user: 1, date: 1 }, { unique: true });
 
-module.exports = mongoose.model('Attendance',AttSchema)
+module.exports = mongoose.model('Attendance', AttSchema);
