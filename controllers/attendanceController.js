@@ -1,43 +1,55 @@
 const Att = require("../models/AttModel");
 const User = require("../models/userModel");
+const moment = require("moment-timezone");
 
 const attendanceController = {};
 
 // ✅ 1. Check-In
+
+
 attendanceController.checkin = async (req, res) => {
   try {
     const { _id } = req.params;
     const user = await User.findById(_id);
     if (!user) return res.status(400).json({ error: "User not found" });
 
-    const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(now);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Current time in Karachi
+    const now = moment().tz("Asia/Karachi");
 
-    const fourPM = new Date(now);
-    fourPM.setHours(16, 0, 0, 0);
+    // Define start and end of the day in Karachi time
+    const startOfDay = now.clone().startOf("day").toDate();
+    const endOfDay = now.clone().endOf("day").toDate();
 
-    // find today's attendance (based on createdAt timestamp)
+    // Define 4 PM in Karachi
+    const fourPM = now.clone().set({ hour: 16, minute: 0, second: 0, millisecond: 0 });
+
+    console.log("Server time (Karachi):", now.format());
+    console.log("Hour:", now.hour());
+    console.log("4 PM Karachi:", fourPM.format());
+    console.log("Is late?", now.isAfter(fourPM));
+
+    // Find today's attendance
     let att = await Att.findOne({
       user: _id,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
     }
 
+    // Determine status and save attendance
+    const status = now.isBefore(fourPM) ? "Present" : "Late";
+
     if (!att) {
       att = await Att.create({
         user: _id,
-        checkInTime: now,
-        status: now < fourPM ? "Present" : "Late",
+        checkInTime: now.toDate(),
+        status,
       });
     } else {
-      att.checkInTime = now;
-      att.status = now < fourPM ? "Present" : "Late";
+      att.checkInTime = now.toDate();
+      att.status = status;
       await att.save();
     }
 
@@ -47,6 +59,7 @@ attendanceController.checkin = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 // ✅ 2. Check-Out
 attendanceController.checkout = async (req, res) => {
@@ -130,7 +143,7 @@ attendanceController.getAllUserStatus = async (req, res) => {
       users.map(async (user) => {
         const attendance = await Att.findOne({
           user: user._id,
-          date: today,
+          checkInTime: { $gte: today },
         }).lean();
 
         return {
@@ -177,7 +190,7 @@ attendanceController.getUserHistoryByName = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
 
     res.json({
       user: {
@@ -199,7 +212,7 @@ attendanceController.getUserHistoryById = async (req, res) => {
     const { id } = req.params
     const user = await User.findOne({ _id: id })
     if (!user) return res.status(404).json({ error: "User not found" });
-    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
     res.json({
       user: {
         _id: user._id,
