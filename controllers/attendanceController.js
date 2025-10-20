@@ -143,7 +143,7 @@ attendanceController.getAllUserStatus = async (req, res) => {
       users.map(async (user) => {
         const attendance = await Att.findOne({
           user: user._id,
-          date: today,
+          checkInTime: { $gte: today },
         }).lean();
 
         return {
