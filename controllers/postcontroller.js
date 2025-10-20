@@ -8,9 +8,9 @@ postController.createPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
 
-    const imagePath = `/uploads/${req.file.filename}`;
+    // const imagePath = `/uploads/${req.file.filename}`;
 
-    await postModel.create({ title, description, image: imagePath, link });
+    await postModel.create({ title, description, link });
 
     res.status(201).json({ message: "Post created successfully" });
   } catch (error) {
