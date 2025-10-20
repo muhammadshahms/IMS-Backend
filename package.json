@@ -20,6 +20,7 @@
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.6.0",
     "mongoose": "^8.16.4",
     "multer": "^2.0.1",
     "multer-storage-cloudinary": "^4.0.0",
