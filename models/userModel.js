@@ -11,6 +11,14 @@ const userSchema = new mongoose.Schema({
     password: String,
     phone: String,
     CNIC: String,
+    gender:{
+        type:String,
+        enum:["Male","Female"],
+    },
+    shift:{
+        type:String,
+        enum:["Morning","Evening"],
+    },
     course:{
         type : String,
         enum : ["Web Development" , "Graphic Designing" , "Digital Marketing"],
