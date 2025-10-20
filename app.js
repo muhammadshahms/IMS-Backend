@@ -35,6 +35,7 @@ app.use(
     origin: [
       process.env.FRONTEND_URL,
       process.env.LOCALHOST_URL,
+      process.env.ADMIN_URL,
       process.env.USER_URL,
     ].filter(Boolean), // removes undefined URLs
     credentials: true,
