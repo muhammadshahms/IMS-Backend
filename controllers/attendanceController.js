@@ -190,7 +190,7 @@ attendanceController.getUserHistoryByName = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
 
     res.json({
       user: {
@@ -212,7 +212,7 @@ attendanceController.getUserHistoryById = async (req, res) => {
     const { id } = req.params
     const user = await User.findOne({ _id: id })
     if (!user) return res.status(404).json({ error: "User not found" });
-    const records = await Att.find({ user: user._id }).sort({ date: -1 });
+    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
     res.json({
       user: {
         _id: user._id,
