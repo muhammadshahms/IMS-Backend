@@ -28,6 +28,11 @@ attendanceController.checkin = async (req, res) => {
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
     }
+    // Add this before your status calculation
+console.log('Server time:', now.toString());
+console.log('Server hours:', now.getHours());
+console.log('Four PM time:', fourPM.toString());
+console.log('Is late?', now >= fourPM);
 
     if (!att) {
       att = await Att.create({
