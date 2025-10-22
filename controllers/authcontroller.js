@@ -9,7 +9,38 @@ const authController = {};
 authController.signupPost = async (req, res) => {
   try {
    
-    const { bq_id, name, email, password, phone, CNIC, course } = req.validatedData
+    const { bq_id, name, email, password, phone, CNIC, course, gender, shift } = req.validatedData
+
+    const existingbq_id = await userModel.findOne({ bq_id });
+    if (existingbq_id) {
+      return res.status(400).json({
+        field: "bq_id",
+        message: "This BQ Id is not available, please try another"
+      });
+    }
+
+    const existingUser = await userModel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        field: "email",
+        message: "This Email is Already Registered"
+      });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hash = await bcrypt.hash(password, salt);
+const userModel = require("../models/userModel")
+const bcrypt = require("bcrypt");
+const { UsertokenGenerator } = require("../utils/token");
+
+
+
+const authController = {};
+
+authController.signupPost = async (req, res) => {
+  try {
+   
+    const { bq_id, name, email, password, phone, CNIC, course, gender, shift } = req.validatedData
 
     const existingbq_id = await userModel.findOne({ bq_id });
     if (existingbq_id) {
@@ -30,7 +61,7 @@ authController.signupPost = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
 
-    await userModel.create({ bq_id, name, email, password: hash, phone, CNIC, course });
+    await userModel.create({ bq_id, name, email, password: hash, phone, CNIC, course, gender, shift  });
 
     return res.status(200).json({ message: "Account created successfully" });
   } catch (error) {
@@ -99,8 +130,98 @@ authController.logout = async (req, res) => {
 authController.updateUser = async (req, res) => {
   try {
     const { _id } = req.params;
-    const { bq_id, name, email, phone, CNIC, course } = req.body;
-    await userModel.findByIdAndUpdate(_id, { bq_id, name, email, phone, CNIC, course });
+    const { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
+    await userModel.findByIdAndUpdate(_id, { bq_id, name, email, phone, CNIC, course, gender, shift });
+    res.status(200).json({ message: "User updated successfully" });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+}
+
+authController.deleteUser = async (req, res) => {
+  try {
+    const { _id } = req.params;
+    await userModel.findByIdAndDelete(_id);
+    res.status(200).json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+}
+
+module.exports = authController;
+    await userModel.create({ bq_id, name, email, password: hash, phone, CNIC, course, gender, shift  });
+
+    return res.status(200).json({ message: "Account created successfully" });
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
+authController.getCourses = async (req, res) => {
+  try {
+    const enumValues = userModel.schema.path("course").enumValues;
+    return res.status(200).json(enumValues);
+  } catch (error) {
+    console.error("Error fetching course enums:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+
+}
+
+authController.signupGet = async (req, res) => {
+  try {
+    const users = await userModel.find()
+    res.json(users)
+  } catch (error) {
+    res.status(500).json({ message: 'Error Fetching Users', error })
+  }
+}
+
+authController.loginPost = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const user = await userModel.findOne({ email });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!user || !isMatch) {
+      return res.status(400).json({ message: 'Invalid Email or Password' });
+    }
+    const token = UsertokenGenerator(user)
+    res.cookie("token", token, {
+      httpOnly: true,      // 🚫 JS can't access cookie (more secure)
+      secure: false,       // ⚠️ true if using HTTPS
+      sameSite: "lax",     
+      maxAge: 1 * 60 * 60 * 1000, // 1 hour
+    })
+
+    // ✅ You can send user info separately if needed
+    res.status(200).json({
+      message: "Login successful",
+      user: { id: user._id, email: user.email, name: user.name },
+    })
+  } catch (error) {
+    console.error('Error logging in:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+}
+
+authController.logout = async (req, res) => {
+  try {
+    res.clearCookie("token");
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error('Error logging out:', error);
+    res.status(500).json({ message: 'Server Error' });
+  }
+}
+
+authController.updateUser = async (req, res) => {
+  try {
+    const { _id } = req.params;
+    const { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
+    await userModel.findByIdAndUpdate(_id, { bq_id, name, email, phone, CNIC, course, gender, shift });
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
     console.error('Error updating user:', error);

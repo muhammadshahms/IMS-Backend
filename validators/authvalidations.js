@@ -8,6 +8,8 @@ const registerSchema = z.object({
   phone: z.string().min(11, 'Phone number must be at least 11 characters'),
   CNIC: z.string().min(13, 'CNIC must be at least 13 characters'),
   course: z.string().min(1, 'Course is required'),
+  gender: z.string().min(1, 'Gender is required'),
+  shift: z.string().min(1, 'Shift is required'),
 });
 
 const updateRegisterSchema = z.object({
@@ -17,6 +19,8 @@ const updateRegisterSchema = z.object({
   phone: z.string().min(11, 'Phone number must be at least 11 characters'),
   CNIC: z.string().min(13, 'CNIC must be at least 13 characters'),
   course: z.string().min(1, 'Course is required'),
+  gender: z.string().min(1, 'Gender is required'),
+  shift: z.string().min(1, 'Shift is required'),
 })
 
 module.exports = { registerSchema, updateRegisterSchema };
