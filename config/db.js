@@ -1,16 +1,17 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 module.exports = async () => {
-    try {
-        await mongoose.connect(process.env.MONGO_URL);
-        console.log("Database connected successfully");
-    }
-    catch(err){
-        console.error("Database connection failed:", err);
-        process.exit(1); 
-    }
-}
+  try {
+    const mongoURL = process.env.MONGO_URL;
+    if (!mongoURL) throw new Error("MONGO_URL not found in environment");
+    await mongoose.connect(mongoURL);
+    console.log("✅ Database connected successfully");
+  } catch (err) {
+    console.error("❌ Database connection failed:", err.message);
+    process.exit(1);
+  }
+};
 
-mongoose.connection.on('disconnected', () => {
-  console.warn("⚠ MongoDB disconnected");
+mongoose.connection.on("disconnected", () => {
+  console.warn("⚠️ MongoDB disconnected");
 });

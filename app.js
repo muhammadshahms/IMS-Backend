@@ -4,66 +4,47 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const dotenv = require("dotenv");
-
 const indexRoute = require("./routes/indexRoute");
 const Half_day_checker = require("./cron/Half_day_checker");
 
-// 🧠 Load environment variables dynamically
-const envFile = process.env.NODE_ENV === "production" ? ".env.production" : ".env.development";
-if (fs.existsSync(envFile)) {
-  dotenv.config({ path: envFile });
-  console.log(`✅ Loaded environment from ${envFile}`);
+// 🧠 Load environment variables only in local development
+if (process.env.NODE_ENV !== "production") {
+  const envFile = ".env.development";
+  if (fs.existsSync(envFile)) {
+    dotenv.config({ path: envFile });
+    console.log(`✅ Loaded environment from ${envFile}`);
+  } else {
+    console.warn("⚠️ .env.development not found");
+  }
 } else {
-  console.log("⚙️ Using system environment variables");
+  console.log("🚀 Running in production mode (Vercel environment vars)");
 }
-
-// 🗄️ Connect to Database
 require("./config/db")();
-
-// 🚀 Initialize App
 const app = express();
-
-// 🖼️ Serve Static Files
-app.use("/images", express.static(path.join(__dirname, "public/images")));
-
-// 🍪 Parse Cookies
-app.use(cookieParser());
-
-// 🌐 CORS Setup
 app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
-      process.env.LOCALHOST_URL,
       process.env.ADMIN_URL,
+      process.env.LOCALHOST_URL,
       process.env.USER_URL,
-    ].filter(Boolean), // removes undefined URLs
+    ].filter(Boolean),
     credentials: true,
   })
 );
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
+app.use(cookieParser());
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 app.set("view engine", "ejs");
 app.set("views", path.join(process.cwd(), "views"));
 
-// Dashboard Route
-app.get("/", (req, res) => {
-  res.render("dashboard");
-});
-
-// Example endpoints
-// app.get("/admin/team", (req, res) => res.send("Teams Endpoint"));
-// app.get("/admin/projects", (req, res) => res.send("Projects Endpoint"));
-// app.get("/admin/pm", (req, res) => res.send("PM Endpoint"));
-// app.get("/user/signup", (req, res) => res.send("Signup Endpoint"));
-
+// Routes
+app.get("/", (req, res) => res.render("dashboard"));
 app.use("/", indexRoute);
 
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+// Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
-
-Half_day_checker()
+Half_day_checker();

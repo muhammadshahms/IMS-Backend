@@ -16,7 +16,7 @@ router.get("/me", protect, (req, res) => {
 router.get("/logout", authController.logout)
 router.put("/update/:_id", validate(updateRegisterSchema), authController.updateUser)
 router.delete("/delete/:_id", authController.deleteUser)
-router.get("/course", authController.getCourses)
+router.get("/enums", authController.getenums)
 
 
 

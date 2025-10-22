@@ -13,37 +13,32 @@ attendanceController.checkin = async (req, res) => {
     const user = await User.findById(_id);
     if (!user) return res.status(400).json({ error: "User not found" });
 
-    // Current time in Karachi
     const now = moment().tz("Asia/Karachi");
+    const today = now.format("YYYY-MM-DD"); // 🟢 fixed line
 
-    // Define start and end of the day in Karachi time
     const startOfDay = now.clone().startOf("day").toDate();
     const endOfDay = now.clone().endOf("day").toDate();
-
-    // Define 4 PM in Karachi
     const fourPM = now.clone().set({ hour: 16, minute: 0, second: 0, millisecond: 0 });
 
     console.log("Server time (Karachi):", now.format());
-    console.log("Hour:", now.hour());
-    console.log("4 PM Karachi:", fourPM.format());
     console.log("Is late?", now.isAfter(fourPM));
 
     // Find today's attendance
     let att = await Att.findOne({
       user: _id,
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
+      date: today, // 🟢 check by date instead of createdAt
     });
 
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
     }
 
-    // Determine status and save attendance
     const status = now.isBefore(fourPM) ? "Present" : "Late";
 
     if (!att) {
       att = await Att.create({
         user: _id,
+        date: today, // 🟢 added date
         checkInTime: now.toDate(),
         status,
       });
@@ -59,6 +54,7 @@ attendanceController.checkin = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
 
 
 // ✅ 2. Check-Out
