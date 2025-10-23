@@ -2,9 +2,9 @@ const postModel = require('../models/postModel')
 const path = require("path");
 const fs = require("fs");
 
-const postController = {}
+const userPostController = {}
 
-postController.createPost = async (req, res) => {
+userPostController.createUserPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
 
@@ -20,7 +20,7 @@ postController.createPost = async (req, res) => {
 };
 
 
-postController.getPosts = async (req, res) => {
+userPostController.getUserPosts = async (req, res) => {
   try {
     const posts = await postModel.find()
     res.status(200).json(posts)
@@ -32,7 +32,7 @@ postController.getPosts = async (req, res) => {
 
 
 
-postController.updatePost = async (req, res) => {
+userPostController.updateUserPost = async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, link, existingImage } = req.body;
@@ -63,7 +63,7 @@ postController.updatePost = async (req, res) => {
   }
 };
 
-postController.deletePost = async (req, res) => {
+userPostController.deleteUserPost = async (req, res) => {
   try {
     const { id } = req.params
     await postModel.findByIdAndDelete(id)
@@ -74,4 +74,4 @@ postController.deletePost = async (req, res) => {
   }
 }
 
-module.exports = postController
+module.exports = userPostController
