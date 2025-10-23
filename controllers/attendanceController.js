@@ -23,10 +23,12 @@ attendanceController.checkin = async (req, res) => {
     console.log("Server time (Karachi):", now.format());
     console.log("Is late?", now.isAfter(fourPM));
 
+
+
     // Find today's attendance
     let att = await Att.findOne({
       user: _id,
-      date: today, // 🟢 check by date instead of createdAt
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
     });
 
     if (att && att.checkInTime) {
@@ -38,7 +40,7 @@ attendanceController.checkin = async (req, res) => {
     if (!att) {
       att = await Att.create({
         user: _id,
-        date: today, // 🟢 added date
+        // date: today, // 🟢 added date
         checkInTime: now.toDate(),
         status,
       });
@@ -51,7 +53,7 @@ attendanceController.checkin = async (req, res) => {
     res.json({ message: "Check-in successful", att });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error",err });
   }
 };
 
