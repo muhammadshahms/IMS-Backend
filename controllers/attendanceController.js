@@ -4,8 +4,6 @@ const moment = require("moment-timezone");
 
 const attendanceController = {};
 
-// ✅ 1. Check-In
-
 
 attendanceController.checkin = async (req, res) => {
   try {
@@ -14,7 +12,7 @@ attendanceController.checkin = async (req, res) => {
     if (!user) return res.status(400).json({ error: "User not found" });
 
     const now = moment().tz("Asia/Karachi");
-    const today = now.format("YYYY-MM-DD"); // 🟢 fixed line
+    const today = now.format("YYYY-MM-DD");
 
     const startOfDay = now.clone().startOf("day").toDate();
     const endOfDay = now.clone().endOf("day").toDate();
@@ -26,10 +24,8 @@ attendanceController.checkin = async (req, res) => {
 
 
     // Find today's attendance
-    let att = await Att.findOne({
-      user: _id,
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
-    });
+    let att = await Att.findOne({user: _id, createdAt: { $gte: startOfDay, $lte: endOfDay }})
+
 
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
