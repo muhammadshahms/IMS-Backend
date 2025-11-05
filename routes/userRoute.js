@@ -5,6 +5,7 @@ const attController = require("../controllers/attendanceController")
 const validate = require("../middlewares/FormValidator")
 const { registerSchema, updateRegisterSchema } = require("../validators/authvalidations");
 const { protect } = require("../middlewares/auth");
+const userPostController = require("../controllers/userPostController");
 
 //admin access users
 router.get("/signup", authController.signupGet)
@@ -17,6 +18,11 @@ router.get("/logout", authController.logout)
 router.put("/update/:_id", validate(updateRegisterSchema), authController.updateUser)
 router.delete("/delete/:_id", authController.deleteUser)
 router.get("/enums", authController.getenums)
+
+router.post("/createpost", userPostController.createUserPost)
+router.get("/getuserpost", userPostController.getUserPosts)
+router.put("/updateuserpost", userPostController.updateUserPost)
+router.delete("/deleteuserpost", userPostController.deleteUserPost)
 
 
 
