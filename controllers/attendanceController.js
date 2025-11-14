@@ -7,6 +7,22 @@ const attendanceController = {};
 
 attendanceController.checkin = async (req, res) => {
   try {
+    const allowedIPs = [
+      process.env.IP_ADDRESS_ONE,
+      process.env.IP_ADDRESS_TWO,
+    ];
+
+    // Client IP
+    const clientIP =
+      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
+
+    console.log("Client IP:", clientIP);
+
+    // IP check
+    if (!allowedIPs.includes(clientIP)) {
+      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
+    }
+
     const { _id } = req.params;
     const user = await User.findById(_id);
     if (!user) return res.status(400).json({ error: "User not found" });
@@ -21,11 +37,11 @@ attendanceController.checkin = async (req, res) => {
     console.log("Server time (Karachi):", now.format());
     console.log("Is late?", now.isAfter(fourPM));
 
-
-
     // Find today's attendance
-    let att = await Att.findOne({user: _id, createdAt: { $gte: startOfDay, $lte: endOfDay }})
-
+    let att = await Att.findOne({
+      user: _id,
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
+    });
 
     if (att && att.checkInTime) {
       return res.status(400).json({ error: "Already checked in today" });
@@ -36,7 +52,6 @@ attendanceController.checkin = async (req, res) => {
     if (!att) {
       att = await Att.create({
         user: _id,
-        // date: today, // 🟢 added date
         checkInTime: now.toDate(),
         status,
       });
@@ -49,7 +64,7 @@ attendanceController.checkin = async (req, res) => {
     res.json({ message: "Check-in successful", att });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal Server Error",err });
+    res.status(500).json({ error: "Internal Server Error", err });
   }
 };
 
@@ -58,6 +73,22 @@ attendanceController.checkin = async (req, res) => {
 // ✅ 2. Check-Out
 attendanceController.checkout = async (req, res) => {
   try {
+    const allowedIPs = [
+      process.env.IP_ADDRESS_ONE,
+      process.env.IP_ADDRESS_TWO,
+    ];
+
+    // Client IP
+    const clientIP =
+      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
+
+    console.log("Client IP:", clientIP);
+
+    // IP check
+    if (!allowedIPs.includes(clientIP)) {
+      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
+    }
+    
     const { _id } = req.params;
     const user = await User.findById(_id);
     if (!user) return res.status(400).json({ error: "User not found" });
