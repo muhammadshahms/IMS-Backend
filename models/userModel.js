@@ -11,22 +11,22 @@ const userSchema = new mongoose.Schema({
     password: String,
     phone: String,
     CNIC: String,
-    gender:{
-        type:String,
-        enum:["Male","Female"],
+    gender: {
+        type: String,
+        enum: ["Male", "Female"],
     },
-    shift:{
-        type:String,
-        enum:["Morning","Evening"],
+    shift: {
+        type: String,
+        enum: ["Morning", "Evening"],
     },
-    course:{
-        type : String,
-        enum : ["Web Development" , "Graphic Designing" , "Digital Marketing"],
-        required:true,
+    course: {
+        type: String,
+        enum: ["Web Development", "Graphic Designing", "Digital Marketing", "Data Science", "Data Analytics", "Cyber Security", "Mobile App Development"],
+        required: true,
     },
-    team:{
+    team: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:"team"
+        ref: "team"
     },
 
 });

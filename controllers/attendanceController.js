@@ -1,6 +1,7 @@
 const Att = require("../models/AttModel");
 const User = require("../models/userModel");
 const moment = require("moment-timezone");
+const checkinValidation = require("../validators/checkinValidation");
 
 const attendanceController = {};
 
@@ -25,7 +26,9 @@ attendanceController.checkin = async (req, res) => {
 
     const { _id } = req.params;
     const user = await User.findById(_id);
+    // const shift = user.shift;
     if (!user) return res.status(400).json({ error: "User not found" });
+    // if (!shift) return res.status(400).json({ error: "User not found" });
 
     const now = moment().tz("Asia/Karachi");
     const today = now.format("YYYY-MM-DD");
@@ -33,9 +36,13 @@ attendanceController.checkin = async (req, res) => {
     const startOfDay = now.clone().startOf("day").toDate();
     const endOfDay = now.clone().endOf("day").toDate();
     const fourPM = now.clone().set({ hour: 16, minute: 0, second: 0, millisecond: 0 });
+    // const threePM = now.clone().set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
+    // const tenAM = now.clone().set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
 
     console.log("Server time (Karachi):", now.format());
     console.log("Is late?", now.isAfter(fourPM));
+
+
 
     // Find today's attendance
     let att = await Att.findOne({

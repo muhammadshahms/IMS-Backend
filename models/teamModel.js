@@ -26,7 +26,7 @@ const teamSchema = new mongoose.Schema(
 
     field: {
       type: String,
-      enum: ["Web Development", "Graphic Designing", "Digital Marketing"],
+      enum: ["Web Development", "Graphic Designing", "Digital Marketing","Data Science","Data Analytics","Cyber Security","Mobile App Development"],
       required: true
     },
 
