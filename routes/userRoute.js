@@ -19,8 +19,8 @@ router.put("/update/:_id", validate(updateRegisterSchema), authController.update
 router.delete("/delete/:_id", authController.deleteUser)
 router.get("/enums", authController.getenums)
 
-router.post("/createpost", protect,  userPostController.createUserPost)
-router.get("/getuserpost", protect, userPostController.getUserPosts)
+router.post("/createpost",   userPostController.createUserPost)
+router.get("/getuserpost",  userPostController.getUserPosts)
 router.put("/updateuserpost", userPostController.updateUserPost)
 router.delete("/deleteuserpost", userPostController.deleteUserPost)
 
