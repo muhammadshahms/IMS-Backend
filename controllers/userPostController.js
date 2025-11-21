@@ -1,4 +1,5 @@
-const postModel = require('../models/postModel')
+const userPostModel = require('../models/userpostModel')
+const User = require("../models/userModel")
 const path = require("path");
 const fs = require("fs");
 
@@ -10,8 +11,7 @@ userPostController.createUserPost = async (req, res) => {
 
     // const imagePath = `/uploads/${req.file.filename}`;
 
-    await postModel.create({ title, description, link });
-
+    await userPostModel.create({ title, description, link });
     res.status(201).json({ message: "Post created successfully" });
   } catch (error) {
     console.error("Error creating post:", error);
@@ -22,7 +22,7 @@ userPostController.createUserPost = async (req, res) => {
 
 userPostController.getUserPosts = async (req, res) => {
   try {
-    const posts = await postModel.find()
+    const posts = await userPostModel.find().populate("user");
     res.status(200).json(posts)
   } catch (error) {
     console.error("Error getting posts:", error);
@@ -49,7 +49,7 @@ userPostController.updateUserPost = async (req, res) => {
       }
     }
 
-    await postModel.findByIdAndUpdate(id, {
+    await userPostModel.findByIdAndUpdate(id, {
       title,
       description,
       link,
@@ -66,7 +66,7 @@ userPostController.updateUserPost = async (req, res) => {
 userPostController.deleteUserPost = async (req, res) => {
   try {
     const { id } = req.params
-    await postModel.findByIdAndDelete(id)
+    await userPostModel.findByIdAndDelete(id)
     res.status(200).json({ message: "Post deleted successfully" })
   } catch (error) {
     console.error("Error deleting post:", error);
