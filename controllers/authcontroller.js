@@ -74,8 +74,7 @@ authController.loginPost = async (req, res) => {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
     const token = UsertokenGenerator(user)
-    res.cookie("token", token, {
-      httpOnly: true,      // 🚫 JS can't access cookie (more secure)
+    res.cookie("token", token, {      // 🚫 JS can't access cookie (more secure)
       secure: false,       // ⚠️ true if using HTTPS
       sameSite: "lax",
       maxAge: 1 * 60 * 60 * 1000, // 1 hour
