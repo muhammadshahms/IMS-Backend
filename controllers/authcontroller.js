@@ -30,9 +30,6 @@ authController.signupPost = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
 
-
-
-
     await userModel.create({ bq_id, name, email, password: hash, phone, CNIC, course, gender, shift });
 
     return res.status(200).json({ message: "Account created successfully" });

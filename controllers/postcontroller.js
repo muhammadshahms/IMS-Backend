@@ -7,10 +7,7 @@ const postController = {}
 postController.createPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
-
     // const imagePath = `/uploads/${req.file.filename}`;
-
-    
 
     await postModel.create({ title, description, link });
 

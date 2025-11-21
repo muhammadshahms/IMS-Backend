@@ -8,29 +8,48 @@ const userPostController = {}
 userPostController.createUserPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
-
-    // const imagePath = `/uploads/${req.file.filename}`;
-
-    await userPostModel.create({ title, description, link });
-    res.status(201).json({ message: "Post created successfully" });
+    
+    // ✅ Token se user ID milega (field name: 'id')
+    const userId = req.user.id;
+    
+    
+    // Create post with user ID
+    const newPost = await userPostModel.create({ 
+      title, 
+      description, 
+      link,
+      user: userId  // ✅ User ID set ho jayegi
+    });
+    
+    // ✅ Post create hone ke baad user data populate karke return karo
+    const populatedPost = await userPostModel
+      .findById(newPost._id)
+      .populate("user", "name");
+    
+    res.status(201).json({ 
+      message: "Post created successfully",
+      post: populatedPost  // Frontend ko populated post milega
+    });
   } catch (error) {
     console.error("Error creating post:", error);
     return res.status(500).json({ message: "Server Error" });
   }
 };
 
-
 userPostController.getUserPosts = async (req, res) => {
   try {
-    const posts = await userPostModel.find().populate("user");
+    const posts = await userPostModel
+      .find({ deletedAt: null })  // Soft deleted posts exclude
+      .populate("user", "name")
+      .sort({ createdAt: -1 });  // Latest first
+    
+    console.log("POSTS:", posts);
     res.status(200).json(posts)
   } catch (error) {
     console.error("Error getting posts:", error);
     return res.status(500).json({ message: "Server Error" });
   }
 }
-
-
 
 userPostController.updateUserPost = async (req, res) => {
   try {
@@ -39,11 +58,9 @@ userPostController.updateUserPost = async (req, res) => {
 
     let imagePath = existingImage;
 
-    // if a new file is uploaded, replace the image
     if (req.file) {
       imagePath = `/images/${req.file.filename}`;
 
-      // Delete old image if exists and not same as default
       if (existingImage && fs.existsSync(path.join(__dirname, `../public${existingImage}`))) {
         fs.unlinkSync(path.join(__dirname, `../public${existingImage}`));
       }
@@ -54,6 +71,7 @@ userPostController.updateUserPost = async (req, res) => {
       description,
       link,
       image: imagePath,
+      updatedAt: new Date()  // ✅ Updated time bhi set karo
     });
 
     res.status(200).json({ message: "Post updated successfully" });
@@ -65,9 +83,17 @@ userPostController.updateUserPost = async (req, res) => {
 
 userPostController.deleteUserPost = async (req, res) => {
   try {
-    const { id } = req.params
-    await userPostModel.findByIdAndDelete(id)
-    res.status(200).json({ message: "Post deleted successfully" })
+    const { id } = req.params;
+    
+    // ✅ Hard delete ki jagah soft delete use karo (recommended)
+    await userPostModel.findByIdAndUpdate(id, {
+      deletedAt: new Date()
+    });
+    
+    // Ya agar hard delete chahiye:
+    // await userPostModel.findByIdAndDelete(id);
+    
+    res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error("Error deleting post:", error);
     return res.status(500).json({ message: "Server Error" });
