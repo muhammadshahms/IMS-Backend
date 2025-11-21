@@ -75,7 +75,7 @@ authController.loginPost = async (req, res) => {
     }
     const token = UsertokenGenerator(user)
     res.cookie("token", token, {      // 🚫 JS can't access cookie (more secure)
-      secure: false,       // ⚠️ true if using HTTPS
+      secure: true,       // ⚠️ true if using HTTPS
       sameSite: "lax",
       maxAge: 1 * 60 * 60 * 1000, // 1 hour
     })
