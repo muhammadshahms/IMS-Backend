@@ -9,7 +9,7 @@ userPostController.createUserPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
     
-    // ✅ Token se user ID milega (field name: 'id')
+    
     const userId = req.user.id;
     
     
