@@ -10,7 +10,7 @@ userPostController.createUserPost = async (req, res) => {
     const { title, description, link } = req.body;
     
     
-    const userId = req.user.id;
+    // const userId = req.user.id;
     
     
     // Create post with user ID
@@ -18,7 +18,7 @@ userPostController.createUserPost = async (req, res) => {
       title, 
       description, 
       link,
-      user: userId  // ✅ User ID set ho jayegi
+      // user: userId  // ✅ User ID set ho jayegi
     });
     
     // ✅ Post create hone ke baad user data populate karke return karo
