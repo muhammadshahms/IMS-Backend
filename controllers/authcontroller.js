@@ -96,7 +96,7 @@ authController.loginPost = async (req, res) => {
 authController.loginGet = async (req, res) => {
   try {
     const userId = req.user.id;
-    const user = await userModel.findById(userId).select("name email");
+    const user = await userModel.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
