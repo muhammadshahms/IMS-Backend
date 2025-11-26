@@ -8,6 +8,11 @@ const { ProjectController } = require("../controllers/projectcontroller");
 const validate = require("../middlewares/FormValidator")
 const { TeamSchema, UpdateTeamSchema } = require("../validators/teamvalidations");
 const { ProjectSchema, UpdateProjectSchema } = require("../validators/ProjectValidations");
+const adminController = require("../controllers/adminController");
+
+
+router.post("/login", adminController.loginAdmin)
+router.post("/create", adminController.createAdmin)
 
 //admin access posts
 router.post("/post", upload.single('image'), postController.createPost)

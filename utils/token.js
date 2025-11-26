@@ -9,7 +9,7 @@ const UsertokenGenerator = (user) => {
       name: user.name,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "24h" }
+    { expiresIn: "6h" }
   )
 }
 

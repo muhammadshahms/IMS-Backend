@@ -7,15 +7,29 @@ const attendanceController = {};
 
 // ✅ Helper function to validate ObjectId
 const isValidObjectId = (id) => {
-  return mongoose.Types.ObjectId.isValid(id) && 
-         /^[0-9a-fA-F]{24}$/.test(id);
+  return mongoose.Types.ObjectId.isValid(id) &&
+    /^[0-9a-fA-F]{24}$/.test(id);
 };
 
 // ✅ 1. Check-In
 attendanceController.checkin = async (req, res) => {
   try {
     const { _id } = req.params;
+    const allowedIPs = [
+      process.env.IP_ADDRESS_ONE,
+      process.env.IP_ADDRESS_TWO,
+    ];
 
+    // Client IP
+    const clientIP =
+      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
+
+    console.log("Client IP:", clientIP);
+
+    // IP check
+    if (!allowedIPs.includes(clientIP)) {
+      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
+    }
     // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
@@ -73,6 +87,21 @@ attendanceController.checkin = async (req, res) => {
 attendanceController.checkout = async (req, res) => {
   try {
     const { _id } = req.params;
+    const allowedIPs = [
+      process.env.IP_ADDRESS_ONE,
+      process.env.IP_ADDRESS_TWO,
+    ];
+
+    // Client IP
+    const clientIP =
+      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
+
+    console.log("Client IP:", clientIP);
+
+    // IP check
+    if (!allowedIPs.includes(clientIP)) {
+      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
+    }
 
     // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
