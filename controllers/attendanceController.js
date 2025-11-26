@@ -1,34 +1,32 @@
 const Att = require("../models/AttModel");
 const User = require("../models/userModel");
 const moment = require("moment-timezone");
-const checkinValidation = require("../validators/checkinValidation");
+const mongoose = require("mongoose");
 
 const attendanceController = {};
 
+// ✅ Helper function to validate ObjectId
+const isValidObjectId = (id) => {
+  return mongoose.Types.ObjectId.isValid(id) && 
+         /^[0-9a-fA-F]{24}$/.test(id);
+};
 
+// ✅ 1. Check-In
 attendanceController.checkin = async (req, res) => {
   try {
-    const allowedIPs = [
-      process.env.IP_ADDRESS_ONE,
-      process.env.IP_ADDRESS_TWO,
-    ];
+    const { _id } = req.params;
 
-    // Client IP
-    const clientIP =
-      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
-
-    console.log("Client IP:", clientIP);
-
-    // IP check
-    if (!allowedIPs.includes(clientIP)) {
-      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
+    // Validate ObjectId
+    if (!_id || _id === 'undefined' || _id === 'null') {
+      return res.status(400).json({ error: "User ID is required" });
     }
 
-    const { _id } = req.params;
+    if (!isValidObjectId(_id)) {
+      return res.status(400).json({ error: "Invalid User ID format" });
+    }
+
     const user = await User.findById(_id);
-    // const shift = user.shift;
-    if (!user) return res.status(400).json({ error: "User not found" });
-    // if (!shift) return res.status(400).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = moment().tz("Asia/Karachi");
     const today = now.format("YYYY-MM-DD");
@@ -36,13 +34,9 @@ attendanceController.checkin = async (req, res) => {
     const startOfDay = now.clone().startOf("day").toDate();
     const endOfDay = now.clone().endOf("day").toDate();
     const fourPM = now.clone().set({ hour: 16, minute: 0, second: 0, millisecond: 0 });
-    // const threePM = now.clone().set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
-    // const tenAM = now.clone().set({ hour: 10, minute: 0, second: 0, millisecond: 0 });
 
     console.log("Server time (Karachi):", now.format());
     console.log("Is late?", now.isAfter(fourPM));
-
-
 
     // Find today's attendance
     let att = await Att.findOne({
@@ -70,35 +64,27 @@ attendanceController.checkin = async (req, res) => {
 
     res.json({ message: "Check-in successful", att });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error", err });
+    console.error("Check-in error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
-
-
 
 // ✅ 2. Check-Out
 attendanceController.checkout = async (req, res) => {
   try {
-    const allowedIPs = [
-      process.env.IP_ADDRESS_ONE,
-      process.env.IP_ADDRESS_TWO,
-    ];
-
-    // Client IP
-    const clientIP =
-      req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
-
-    console.log("Client IP:", clientIP);
-
-    // IP check
-    if (!allowedIPs.includes(clientIP)) {
-      return res.status(403).json({ error: "Attendance only allowed from incubation network" });
-    }
-    
     const { _id } = req.params;
+
+    // Validate ObjectId
+    if (!_id || _id === 'undefined' || _id === 'null') {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    if (!isValidObjectId(_id)) {
+      return res.status(400).json({ error: "Invalid User ID format" });
+    }
+
     const user = await User.findById(_id);
-    if (!user) return res.status(400).json({ error: "User not found" });
+    if (!user) return res.status(404).json({ error: "User not found" });
 
     const now = new Date();
     const startOfDay = new Date(now);
@@ -120,8 +106,8 @@ attendanceController.checkout = async (req, res) => {
 
     res.json({ message: "Check-out successful", att });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Check-out error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
 
@@ -129,7 +115,15 @@ attendanceController.checkout = async (req, res) => {
 attendanceController.getAttendanceStatus = async (req, res) => {
   try {
     const { _id } = req.params;
-    if (!_id) return res.status(400).json({ error: "User ID is required" });
+
+    // Validate ObjectId
+    // if (!_id || _id === 'undefined' || _id === 'null') {
+    //   return res.status(400).json({ error: "User ID is required" });
+    // }
+
+    // if (!isValidObjectId(_id)) {
+    //   return res.status(400).json({ error: "Invalid User ID format" });
+    // }
 
     const user = await User.findById(_id);
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -158,8 +152,8 @@ attendanceController.getAttendanceStatus = async (req, res) => {
       checkOutTime: attendance.checkOutTime,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Get status error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
 
@@ -193,7 +187,7 @@ attendanceController.getAllUserStatus = async (req, res) => {
     res.json(userStatuses);
   } catch (error) {
     console.error("Error fetching statuses:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
@@ -201,23 +195,25 @@ attendanceController.getAllUserStatus = async (req, res) => {
 attendanceController.getAttendanceHistory = async (req, res) => {
   try {
     const records = await Att.find()
-      .populate("user", "name email") // 👈 Ensure `user` field is ObjectId ref
-      .sort({ date: -1 });
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
 
     res.json(records);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Get history error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
-``
 
 // ✅ 6. Get Specific User History By Name
 attendanceController.getUserHistoryByName = async (req, res) => {
   try {
     const { name } = req.params;
 
-    // 👇 Case-insensitive name search
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ error: "Name parameter is required" });
+    }
+
     const user = await User.findOne({ name: { $regex: new RegExp(name, "i") } });
 
     if (!user) return res.status(404).json({ error: "User not found" });
@@ -234,17 +230,30 @@ attendanceController.getUserHistoryByName = async (req, res) => {
       history: records,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Get user history by name error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
 
+// ✅ 7. Get User History By ID
 attendanceController.getUserHistoryById = async (req, res) => {
   try {
-    const { id } = req.params
-    const user = await User.findOne({ _id: id })
+    const { id } = req.params;
+
+    // Validate ObjectId
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    if (!isValidObjectId(id)) {
+      return res.status(400).json({ error: "Invalid User ID format" });
+    }
+
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
+
     const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
+
     res.json({
       user: {
         _id: user._id,
@@ -255,14 +264,25 @@ attendanceController.getUserHistoryById = async (req, res) => {
       history: records,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Get user history by ID error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
-}
-// ✅ 7. Update Attendance Record (Admin use)
+};
+
+// ✅ 8. Update Attendance Record (Admin use)
 attendanceController.updateAttendanceRecord = async (req, res) => {
   try {
     const { attendanceId } = req.params;
+
+    // Validate ObjectId
+    if (!attendanceId || attendanceId === 'undefined' || attendanceId === 'null') {
+      return res.status(400).json({ error: "Attendance ID is required" });
+    }
+
+    if (!isValidObjectId(attendanceId)) {
+      return res.status(400).json({ error: "Invalid Attendance ID format" });
+    }
+
     const { checkInTime, checkOutTime, status } = req.body;
 
     const updated = await Att.findByIdAndUpdate(
@@ -274,22 +294,32 @@ attendanceController.updateAttendanceRecord = async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Record not found" });
     res.json({ message: "Record updated", updated });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Update attendance error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
 
-// ✅ 8. Delete Attendance Record
+// ✅ 9. Delete Attendance Record
 attendanceController.deleteAttendanceRecord = async (req, res) => {
   try {
     const { attendanceId } = req.params;
+
+    // Validate ObjectId
+    if (!attendanceId || attendanceId === 'undefined' || attendanceId === 'null') {
+      return res.status(400).json({ error: "Attendance ID is required" });
+    }
+
+    if (!isValidObjectId(attendanceId)) {
+      return res.status(400).json({ error: "Invalid Attendance ID format" });
+    }
+
     const deleted = await Att.findByIdAndDelete(attendanceId);
     if (!deleted) return res.status(404).json({ error: "Record not found" });
 
     res.json({ message: "Attendance record deleted" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Delete attendance error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
   }
 };
 
