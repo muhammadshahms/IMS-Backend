@@ -1,0 +1,8 @@
+MONGO_URL=mongodb+srv://zeeshansd767:zeeshansd767@ims.tbja6ut.mongodb.net/?retryWrites=true&w=majority&appName=IMS
+JWT_SECRET=M6RlN74Yp-n3FJyz_0ykuzqx2qeHuAz1Nz4TtfW_rTM
+FRONTEND_URL=https://incubation-management.vercel.app
+LOCALHOST_URL=http://localhost:5174
+USER_URL=http://localhost:5173
+CLOUDINARY_NAME=dqaqtqigh
+CLOUDINARY_API_KEY=518236846532775
+CLOUDINARY_API_SECRET=g2D0V_UfimWeVscifprDGvNOW5I
