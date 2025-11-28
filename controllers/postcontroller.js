@@ -1,13 +1,14 @@
-const postModel = require('../models/postModel')
+// postController.js (Admin Posts)
+const postModel = require('../models/postModel');
 const path = require("path");
 const fs = require("fs");
 
-const postController = {}
+const postController = {};
 
+// Create Post (Admin)
 postController.createPost = async (req, res) => {
   try {
     const { title, description, link } = req.body;
-    // const imagePath = `/uploads/${req.file.filename}`;
 
     await postModel.create({ title, description, link });
 
@@ -18,19 +19,43 @@ postController.createPost = async (req, res) => {
   }
 };
 
-
+// Get Posts with Pagination (Admin)
 postController.getPosts = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Total posts count
+    const totalPosts = await postModel.countDocuments();
+
+    // Fetch paginated posts
     const posts = await postModel.find()
-    res.status(200).json(posts)
+      .sort({ createdAt: -1 }) // Latest first
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalPosts / limit);
+    const hasMore = page < totalPages;
+
+    res.status(200).json({
+      posts,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalPosts,
+        hasMore,
+        postsPerPage: limit,
+      },
+    });
   } catch (error) {
     console.error("Error getting posts:", error);
     return res.status(500).json({ message: "Server Error" });
   }
-}
+};
 
-
-
+// Update Post (Admin)
 postController.updatePost = async (req, res) => {
   try {
     const { id } = req.params;
@@ -62,15 +87,16 @@ postController.updatePost = async (req, res) => {
   }
 };
 
+// Delete Post (Admin)
 postController.deletePost = async (req, res) => {
   try {
-    const { id } = req.params
-    await postModel.findByIdAndDelete(id)
-    res.status(200).json({ message: "Post deleted successfully" })
+    const { id } = req.params;
+    await postModel.findByIdAndDelete(id);
+    res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error("Error deleting post:", error);
     return res.status(500).json({ message: "Server Error" });
   }
-}
+};
 
-module.exports = postController
+module.exports = postController;
