@@ -1,6 +1,7 @@
 const userModel = require("../models/userModel")
 const bcrypt = require("bcrypt");
 const { UsertokenGenerator } = require("../utils/token");
+const paginate = require("../utils/paginate");
 
 
 
@@ -58,12 +59,26 @@ authController.getenums = async (req, res) => {
 
 authController.signupGet = async (req, res) => {
   try {
-    const users = await userModel.find()
-    res.json(users)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await paginate({
+      model: userModel,
+      page,
+      limit,
+      query: {}, // get all users
+      sort: { createdAt: -1 }, // latest users first
+      populate: null
+    });
+
+    res.status(200).json(result);
+
   } catch (error) {
-    res.status(500).json({ message: 'Error Fetching Users', error })
+    console.error("Error Fetching Users:", error);
+    res.status(500).json({ message: 'Error Fetching Users', error });
   }
-}
+};
+
 
 authController.loginPost = async (req, res) => {
   try {

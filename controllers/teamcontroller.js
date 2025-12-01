@@ -1,16 +1,29 @@
 const { default: mongoose } = require('mongoose');
 const Team = require('../models/teamModel');
 const User = require("../models/userModel");
+const paginate = require('../utils/paginate');
 
 const TeamController = {};
 
 
 TeamController.teamGet = async (req, res) => {
   try {
-    const teams = await Team.find()
-      .populate("members.user", "name");
-    res.json(teams);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await paginate({
+      model: Team,
+      page,
+      limit,
+      query: {},  // all teams
+      sort: { createdAt: -1 },  // latest teams first
+      populate: { path: "members.user", select: "name" }  // populate nested members
+    });
+
+    res.status(200).json(result);
+
   } catch (error) {
+    console.error("Error Fetching Teams:", error);
     res.status(500).json({ message: 'Error Fetching Teams', error });
   }
 };

@@ -2,6 +2,7 @@ const userPostModel = require('../models/userpostModel');
 const User = require("../models/userModel");
 const path = require("path");
 const fs = require("fs");
+const paginate = require('../utils/paginate');
 
 const userPostController = {};
 
@@ -61,37 +62,17 @@ userPostController.getUserPosts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
 
-    // Total posts count (excluding soft deleted)
-    const totalPosts = await userPostModel.countDocuments({ 
-      deletedAt: null 
+    const result = await paginate({
+      model: userPostModel,
+      page,
+      limit,
+      query: { deletedAt: null },  // filter
+      sort: { createdAt: -1 },     // latest first
+      populate: { path: "user", select: "name" }, // populate
     });
 
-    // Fetch paginated posts
-    const posts = await userPostModel
-      .find({ deletedAt: null })
-      .populate("user", "name")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    // Calculate pagination info
-    const totalPages = Math.ceil(totalPosts / limit);
-    const hasMore = page < totalPages;
-
-    console.log("Fetched Posts:", posts.length, "Page:", page);
-
-    res.status(200).json({
-      posts,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalPosts,
-        hasMore,
-        postsPerPage: limit,
-      },
-    });
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error getting posts:", error);
     return res.status(500).json({ message: "Server Error" });

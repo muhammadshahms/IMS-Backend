@@ -1,16 +1,33 @@
 const Project = require("../models/projectModel");
+const paginate = require("../utils/paginate");
 ProjectController = {}
 
 
 ProjectController.getProjects = async (req, res) => {
-  
   try {
-    const project = await Project.find().populate("teamName","teamName").populate("PM" , "name")
-    res.json(project);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await paginate({
+      model: Project,
+      page,
+      limit,
+      query: {},  // fetch all projects
+      sort: { createdAt: -1 }, // latest projects first
+      populate: [
+        { path: "teamName", select: "teamName" },
+        { path: "PM", select: "name" }
+      ]
+    });
+
+    res.status(200).json(result);
+
   } catch (error) {
+    console.error("Error Fetching Projects:", error);
     res.status(500).json({ message: 'Error Fetching Projects', error });
   }
 };
+
 
 ProjectController.projectPost = async (req, res) => {
   try {

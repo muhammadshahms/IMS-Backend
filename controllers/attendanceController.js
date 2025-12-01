@@ -2,6 +2,7 @@ const Att = require("../models/AttModel");
 const User = require("../models/userModel");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
+const paginate = require("../utils/paginate");
 
 const attendanceController = {};
 
@@ -20,17 +21,17 @@ attendanceController.checkin = async (req, res) => {
       process.env.IP_ADDRESS_TWO,
     ];
 
-    // Client IP
+    
     const clientIP =
       req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
 
     console.log("Client IP:", clientIP);
 
-    // IP check
+    
     if (!allowedIPs.includes(clientIP)) {
       return res.status(403).json({ error: "Attendance only allowed from incubation network" });
     }
-    // Validate ObjectId
+    
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -223,11 +224,20 @@ attendanceController.getAllUserStatus = async (req, res) => {
 // ✅ 5. Get Full Attendance History (All Users)
 attendanceController.getAttendanceHistory = async (req, res) => {
   try {
-    const records = await Att.find()
-      .populate("user", "name email")
-      .sort({ createdAt: -1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    res.json(records);
+    const result = await paginate({
+      model: Att,
+      page,
+      limit,
+      query: {},  // all records
+      sort: { createdAt: -1 },
+      populate: { path: "user", select: "name email" }
+    });
+
+    res.status(200).json(result);
+
   } catch (err) {
     console.error("Get history error:", err);
     res.status(500).json({ error: "Internal Server Error", details: err.message });
