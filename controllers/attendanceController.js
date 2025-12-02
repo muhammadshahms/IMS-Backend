@@ -21,17 +21,15 @@ attendanceController.checkin = async (req, res) => {
       process.env.IP_ADDRESS_TWO,
     ];
 
-    
     const clientIP =
       req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
 
     console.log("Client IP:", clientIP);
 
-    
     if (!allowedIPs.includes(clientIP)) {
       return res.status(403).json({ error: "Attendance only allowed from incubation network" });
     }
-    
+
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -93,18 +91,15 @@ attendanceController.checkout = async (req, res) => {
       process.env.IP_ADDRESS_TWO,
     ];
 
-    // Client IP
     const clientIP =
       req.headers["x-forwarded-for"]?.split(",")[0] || req.connection.remoteAddress;
 
     console.log("Client IP:", clientIP);
 
-    // IP check
     if (!allowedIPs.includes(clientIP)) {
       return res.status(403).json({ error: "Attendance only allowed from incubation network" });
     }
 
-    // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -146,15 +141,6 @@ attendanceController.getAttendanceStatus = async (req, res) => {
   try {
     const { _id } = req.params;
 
-    // Validate ObjectId
-    // if (!_id || _id === 'undefined' || _id === 'null') {
-    //   return res.status(400).json({ error: "User ID is required" });
-    // }
-
-    // if (!isValidObjectId(_id)) {
-    //   return res.status(400).json({ error: "Invalid User ID format" });
-    // }
-
     const user = await User.findById(_id);
     if (!user) return res.status(404).json({ error: "User not found" });
 
@@ -187,41 +173,63 @@ attendanceController.getAttendanceStatus = async (req, res) => {
   }
 };
 
-// ✅ 4. Get All Users' Today's Status
+// ✅ 4. Get All Users' Today's Status (Already has pagination)
 attendanceController.getAllUserStatus = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const users = await User.find().lean();
+    const total = await User.countDocuments();
+    const users = await User.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    const userStatuses = await Promise.all(
-      users.map(async (user) => {
-        const attendance = await Att.findOne({
-          user: user._id,
-          checkInTime: { $gte: today },
-        }).lean();
+    const userIds = users.map(u => u._id);
+    const attendances = await Att.find({
+      user: { $in: userIds },
+      checkInTime: { $gte: today },
+    }).lean();
 
-        return {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          status: attendance ? attendance.status : "Absent",
-          checkInTime: attendance?.checkInTime || null,
-          checkOutTime: attendance?.checkOutTime || null,
-        };
-      })
+    const attendanceMap = new Map(
+      attendances.map(att => [att.user.toString(), att])
     );
 
-    res.json(userStatuses);
+    const userStatuses = users.map(user => {
+      const attendance = attendanceMap.get(user._id.toString());
+      return {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        status: attendance ? attendance.status : "Absent",
+        checkInTime: attendance?.checkInTime || null,
+        checkOutTime: attendance?.checkOutTime || null,
+      };
+    });
+
+    res.json({
+      data: userStatuses,
+      pagination: {
+        total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        limit,
+        hasMore: page * limit < total,
+      },
+    });
   } catch (error) {
     console.error("Error fetching statuses:", error);
     res.status(500).json({ error: "Internal Server Error", details: error.message });
   }
 };
 
-// ✅ 5. Get Full Attendance History (All Users)
+// ✅ 5. Get Full Attendance History (Already uses paginate utility)
 attendanceController.getAttendanceHistory = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -231,7 +239,7 @@ attendanceController.getAttendanceHistory = async (req, res) => {
       model: Att,
       page,
       limit,
-      query: {},  // all records
+      query: {},
       sort: { createdAt: -1 },
       populate: { path: "user", select: "name email" }
     });
@@ -244,10 +252,12 @@ attendanceController.getAttendanceHistory = async (req, res) => {
   }
 };
 
-// ✅ 6. Get Specific User History By Name
+// ✅ 6. Get Specific User History By Name (NOW WITH PAGINATION)
 attendanceController.getUserHistoryByName = async (req, res) => {
   try {
     const { name } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
     if (!name || name.trim() === '') {
       return res.status(400).json({ error: "Name parameter is required" });
@@ -257,7 +267,14 @@ attendanceController.getUserHistoryByName = async (req, res) => {
 
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
+    const result = await paginate({
+      model: Att,
+      page,
+      limit,
+      query: { user: user._id },
+      sort: { createdAt: -1 },
+      populate: null
+    });
 
     res.json({
       user: {
@@ -266,7 +283,8 @@ attendanceController.getUserHistoryByName = async (req, res) => {
         email: user.email,
         banoqabilId: user.bq_id,
       },
-      history: records,
+      history: result.data,
+      pagination: result.pagination
     });
   } catch (err) {
     console.error("Get user history by name error:", err);
@@ -274,12 +292,13 @@ attendanceController.getUserHistoryByName = async (req, res) => {
   }
 };
 
-// ✅ 7. Get User History By ID
+// ✅ 7. Get User History By ID (NOW WITH PAGINATION)
 attendanceController.getUserHistoryById = async (req, res) => {
   try {
     const { id } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    // Validate ObjectId
     if (!id || id === 'undefined' || id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -291,7 +310,14 @@ attendanceController.getUserHistoryById = async (req, res) => {
     const user = await User.findById(id);
     if (!user) return res.status(404).json({ error: "User not found" });
 
-    const records = await Att.find({ user: user._id }).sort({ createdAt: -1 });
+    const result = await paginate({
+      model: Att,
+      page,
+      limit,
+      query: { user: user._id },
+      sort: { createdAt: -1 },
+      populate: null
+    });
 
     res.json({
       user: {
@@ -300,7 +326,8 @@ attendanceController.getUserHistoryById = async (req, res) => {
         email: user.email,
         banoqabilId: user.bq_id,
       },
-      history: records,
+      history: result.data,
+      pagination: result.pagination
     });
   } catch (err) {
     console.error("Get user history by ID error:", err);
@@ -313,7 +340,6 @@ attendanceController.updateAttendanceRecord = async (req, res) => {
   try {
     const { attendanceId } = req.params;
 
-    // Validate ObjectId
     if (!attendanceId || attendanceId === 'undefined' || attendanceId === 'null') {
       return res.status(400).json({ error: "Attendance ID is required" });
     }
@@ -343,7 +369,6 @@ attendanceController.deleteAttendanceRecord = async (req, res) => {
   try {
     const { attendanceId } = req.params;
 
-    // Validate ObjectId
     if (!attendanceId || attendanceId === 'undefined' || attendanceId === 'null') {
       return res.status(400).json({ error: "Attendance ID is required" });
     }
