@@ -185,7 +185,7 @@ attendanceController.getAllUserStatus = async (req, res) => {
 
     const total = await User.countDocuments();
     const users = await User.find()
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1, _id: 1 })
       .skip(skip)
       .limit(limit)
       .lean();
@@ -240,7 +240,7 @@ attendanceController.getAttendanceHistory = async (req, res) => {
       page,
       limit,
       query: {},
-      sort: { createdAt: -1 },
+      sort: { createdAt: -1, _id: 1 },
       populate: { path: "user", select: "name email" }
     });
 
@@ -272,7 +272,7 @@ attendanceController.getUserHistoryByName = async (req, res) => {
       page,
       limit,
       query: { user: user._id },
-      sort: { createdAt: -1 },
+      sort: { createdAt: -1, _id: 1 },
       populate: null
     });
 
@@ -315,7 +315,7 @@ attendanceController.getUserHistoryById = async (req, res) => {
       page,
       limit,
       query: { user: user._id },
-      sort: { createdAt: -1 },
+      sort: { createdAt: -1, _id: 1 },
       populate: null
     });
 
