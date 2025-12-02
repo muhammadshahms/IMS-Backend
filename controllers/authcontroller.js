@@ -67,7 +67,7 @@ authController.signupGet = async (req, res) => {
       page,
       limit,
       query: {}, // get all users
-      sort: { createdAt: -1, _id: -1 }, // latest users first
+      sort: { createdAt: -1, _id: 1 }, // latest users first
       populate: null
     });
 
