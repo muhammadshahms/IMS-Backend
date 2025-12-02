@@ -173,7 +173,7 @@ attendanceController.getAttendanceStatus = async (req, res) => {
   }
 };
 
-// ✅ 4. Get All Users' Today's Status (Already has pagination)
+// ✅ 4. Get All Users' Today's Status (WITH PAGINATION)
 attendanceController.getAllUserStatus = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
