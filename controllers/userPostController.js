@@ -3,6 +3,7 @@ const User = require("../models/userModel");
 const path = require("path");
 const fs = require("fs");
 const paginate = require('../utils/paginate');
+const { getIO } = require("../socket");
 
 const userPostController = {};
 
@@ -16,7 +17,7 @@ userPostController.createUserPost = async (req, res) => {
 
     // Validation
     if (!title || !description) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         errors: {
           title: !title ? "Title is required" : undefined,
           description: !description ? "Description is required" : undefined,
@@ -25,11 +26,11 @@ userPostController.createUserPost = async (req, res) => {
     }
 
     // Create post with user ID
-    const newPost = await userPostModel.create({ 
-      title, 
-      description, 
+    const newPost = await userPostModel.create({
+      title,
+      description,
       link,
-      user: userId 
+      user: userId
     });
 
     // Post create hone ke baad user data populate karke return karo
@@ -37,7 +38,11 @@ userPostController.createUserPost = async (req, res) => {
       .findById(newPost._id)
       .populate("user", "name");
 
-    res.status(201).json({ 
+    // Emit socket event
+    const io = getIO();
+    io.emit("post:created", { post: populatedPost });
+
+    res.status(201).json({
       message: "Post created successfully",
       post: populatedPost
     });
@@ -100,8 +105,8 @@ userPostController.updateUserPost = async (req, res) => {
     }
 
     if (post.user.toString() !== userId.toString()) {
-      return res.status(403).json({ 
-        message: "You can only edit your own posts" 
+      return res.status(403).json({
+        message: "You can only edit your own posts"
       });
     }
 
@@ -116,6 +121,10 @@ userPostController.updateUserPost = async (req, res) => {
       },
       { new: true, runValidators: true }
     ).populate("user", "name");
+
+    // Emit socket event
+    const io = getIO();
+    io.emit("post:updated", { post: updatedPost });
 
     res.status(200).json({
       message: "Post updated successfully",
@@ -157,8 +166,8 @@ userPostController.deleteUserPost = async (req, res) => {
     }
 
     if (post.user.toString() !== userId.toString()) {
-      return res.status(403).json({ 
-        message: "You can only delete your own posts" 
+      return res.status(403).json({
+        message: "You can only delete your own posts"
       });
     }
 
@@ -166,6 +175,10 @@ userPostController.deleteUserPost = async (req, res) => {
     await userPostModel.findByIdAndUpdate(id, {
       deletedAt: new Date(),
     });
+
+    // Emit socket event
+    const io = getIO();
+    io.emit("post:deleted", { postId: id });
 
     // Ya agar hard delete chahiye:
     // await userPostModel.findByIdAndDelete(id);
@@ -176,5 +189,6 @@ userPostController.deleteUserPost = async (req, res) => {
     return res.status(500).json({ message: "Server Error" });
   }
 };
+
 
 module.exports = userPostController;

@@ -4,8 +4,12 @@ const path = require("path");
 const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const dotenv = require("dotenv");
+const http = require("http");
 const indexRoute = require("./routes/indexRoute");
+const commentRoute = require("./routes/commentRoute");
+const likeRoute = require("./routes/likeRoute");
 const Half_day_checker = require("./cron/Half_day_checker");
+const { initializeSocket } = require("./socket");
 
 // 🧠 Load environment variables only in local development
 if (process.env.NODE_ENV !== "production") {
@@ -21,6 +25,14 @@ if (process.env.NODE_ENV !== "production") {
 }
 require("./config/db")();
 const app = express();
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = initializeSocket(server);
+console.log("✅ Socket.IO initialized");
+
 app.use(
   cors({
     origin: [
@@ -42,9 +54,11 @@ app.set("views", path.join(process.cwd(), "views"));
 // Routes
 app.get("/", (req, res) => res.render("dashboard"));
 app.use("/", indexRoute);
+app.use("/api/comments", commentRoute);
+app.use("/api/likes", likeRoute);
 
 // Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
 
 Half_day_checker();

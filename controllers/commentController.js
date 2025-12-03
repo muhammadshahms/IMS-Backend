@@ -2,13 +2,40 @@
 const commentModel = require('../models/CommentModel');
 const userPostModel = require('../models/userpostModel');
 const paginate = require('../utils/paginate');
+const { getIO } = require('../socket');
 
 const commentController = {};
+
+// Helper function to build comment tree
+const buildCommentTree = async (comments) => {
+  const commentMap = new Map();
+  const rootComments = [];
+
+  // First pass: create a map of all comments
+  comments.forEach(comment => {
+    commentMap.set(comment._id.toString(), { ...comment, replies: [] });
+  });
+
+  // Second pass: build the tree structure
+  comments.forEach(comment => {
+    const commentObj = commentMap.get(comment._id.toString());
+    if (comment.parentComment) {
+      const parent = commentMap.get(comment.parentComment.toString());
+      if (parent) {
+        parent.replies.push(commentObj);
+      }
+    } else {
+      rootComments.push(commentObj);
+    }
+  });
+
+  return rootComments;
+};
 
 // Create Comment
 commentController.createComment = async (req, res) => {
   try {
-    const { postId, content } = req.body;
+    const { postId, content, parentCommentId } = req.body;
     const userId = req.user.id;
 
     // Validation
@@ -27,17 +54,52 @@ commentController.createComment = async (req, res) => {
       return res.status(404).json({ message: "Post not found" });
     }
 
+    // If replying to a comment, validate parent comment
+    if (parentCommentId) {
+      const parentComment = await commentModel.findById(parentCommentId);
+
+      if (!parentComment || parentComment.deletedAt) {
+        return res.status(404).json({ message: "Parent comment not found" });
+      }
+
+      if (parentComment.post.toString() !== postId) {
+        return res.status(400).json({
+          message: "Parent comment does not belong to this post"
+        });
+      }
+
+      // Check max depth
+      if (parentComment.depth >= 5) {
+        return res.status(400).json({
+          message: "Maximum nesting depth reached (5 levels)"
+        });
+      }
+    }
+
     // Create comment
     const newComment = await commentModel.create({
       content,
       post: postId,
-      user: userId
+      user: userId,
+      parentComment: parentCommentId || null
     });
 
     // Populate user data
     const populatedComment = await commentModel
       .findById(newComment._id)
       .populate("user", "name");
+
+    // Emit socket event to post room
+    try {
+      const io = getIO();
+      io.to(`post:${postId}`).emit('comment:created', {
+        comment: populatedComment,
+        parentCommentId: parentCommentId || null
+      });
+    } catch (socketError) {
+      console.error('Socket emission error:', socketError);
+      // Continue even if socket fails
+    }
 
     res.status(201).json({
       message: "Comment added successfully",
@@ -58,21 +120,40 @@ commentController.createComment = async (req, res) => {
   }
 };
 
-// Get Comments for a Post
+// Get Comments for a Post (with tree structure)
 commentController.getCommentsByPost = async (req, res) => {
   try {
     const { postId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    const result = await paginate({
-      model: commentModel,
-      page,
-      limit,
-      query: { post: postId, deletedAt: null },
-      sort: { createdAt: -1 }, // Latest first
-      populate: { path: "user", select: "name" },
-    });
+    // Get all comments for the post (not just root comments)
+    // We need all comments to build the tree
+    const allComments = await commentModel
+      .find({ post: postId, deletedAt: null })
+      .populate("user", "name")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Build comment tree
+    const commentTree = await buildCommentTree(allComments);
+
+    // Paginate only the root comments
+    const startIndex = (page - 1) * limit;
+    const endIndex = page * limit;
+    const paginatedRootComments = commentTree.slice(startIndex, endIndex);
+
+    const result = {
+      data: paginatedRootComments,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(commentTree.length / limit),
+        totalItems: commentTree.length,
+        itemsPerPage: limit,
+        hasNextPage: endIndex < commentTree.length,
+        hasPrevPage: page > 1
+      }
+    };
 
     res.status(200).json(result);
   } catch (error) {
@@ -116,6 +197,17 @@ commentController.updateComment = async (req, res) => {
       { new: true, runValidators: true }
     ).populate("user", "name");
 
+    // Emit socket event to post room
+    try {
+      const io = getIO();
+      io.to(`post:${comment.post}`).emit('comment:updated', {
+        comment: updatedComment
+      });
+    } catch (socketError) {
+      console.error('Socket emission error:', socketError);
+      // Continue even if socket fails
+    }
+
     res.status(200).json({
       message: "Comment updated successfully",
       comment: updatedComment,
@@ -135,7 +227,7 @@ commentController.updateComment = async (req, res) => {
   }
 };
 
-// Delete Comment
+// Delete Comment (with cascade delete for replies)
 commentController.deleteComment = async (req, res) => {
   try {
     const { id } = req.params;
@@ -154,10 +246,40 @@ commentController.deleteComment = async (req, res) => {
       });
     }
 
-    // Soft delete
+    // Soft delete the comment
     await commentModel.findByIdAndUpdate(id, {
       deletedAt: new Date(),
     });
+
+    // Cascade soft delete all child comments
+    const deleteReplies = async (parentId) => {
+      const replies = await commentModel.find({
+        parentComment: parentId,
+        deletedAt: null
+      });
+
+      for (const reply of replies) {
+        await commentModel.findByIdAndUpdate(reply._id, {
+          deletedAt: new Date(),
+        });
+        // Recursively delete nested replies
+        await deleteReplies(reply._id);
+      }
+    };
+
+    await deleteReplies(id);
+
+    // Emit socket event to post room
+    try {
+      const io = getIO();
+      io.to(`post:${comment.post}`).emit('comment:deleted', {
+        commentId: id,
+        parentCommentId: comment.parentComment
+      });
+    } catch (socketError) {
+      console.error('Socket emission error:', socketError);
+      // Continue even if socket fails
+    }
 
     res.status(200).json({ message: "Comment deleted successfully" });
   } catch (error) {
