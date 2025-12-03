@@ -1,4 +1,4 @@
-```typescript
+
 import React, { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import Loader from "@/components/Loader";
 
@@ -151,4 +151,3 @@ const PaginatedList = forwardRef(<T extends { _id?: string }>(
 
 // Explicitly cast the component to handle the generic type correctly in TSX
 export default PaginatedList as <T>(props: PaginatedListProps<T> & { ref?: React.Ref<PaginatedListRef<T>> }) => React.ReactElement;
-```
