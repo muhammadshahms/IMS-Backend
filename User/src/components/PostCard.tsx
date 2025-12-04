@@ -35,12 +35,12 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
-import { Clock, Edit, ExternalLink, Heart, MessageSquare, MoreVertical, Share2, Trash2 } from "lucide-react";
+import { Clock, Edit, ExternalLink, Heart, MessageSquare, MoreVertical, Trash2 } from "lucide-react";
 import { CommentsSection } from "./CommentsSection";
 import { useAuthStore } from "@/hooks/store/authStore";
 import { likeRepo } from "@/repositories/likeRepo";
+import { commentRepo } from "@/repositories/commentRepo";
 import { useSocket } from "@/hooks/useSocket";
-import { LikeAddedPayload, LikeRemovedPayload } from "@/types/like";
 
 export const PostCard = ({
   postId,
@@ -62,6 +62,7 @@ export const PostCard = ({
   const [showComments, setShowComments] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
   const [isLiking, setIsLiking] = useState(false);
 
   const [editForm, setEditForm] = useState({
@@ -74,9 +75,7 @@ export const PostCard = ({
   const displayName = isAdmin ? "Admin" : authorName || "User";
   const avatarText = displayName.charAt(0).toUpperCase();
 
-  console.log("PostCard rendered with ID:", postId);
-
-  // Fetch initial like status
+  // Fetch initial like status and comment count
   useEffect(() => {
     const fetchLikes = async () => {
       try {
@@ -88,10 +87,20 @@ export const PostCard = ({
       }
     };
 
+    const fetchCommentCount = async () => {
+      try {
+        const res = await commentRepo.getCommentsByPost(postId, 1, 1);
+        setCommentCount(res.pagination?.totalItems || 0);
+      } catch (error) {
+        console.error("Failed to fetch comment count:", error);
+      }
+    };
+
     if (postId) {
       fetchLikes();
+      fetchCommentCount();
     }
-  }, [isConnected, on, user?._id]);
+  }, [postId]);
 
   const formatTimeAgo = (dateString) => {
     const seconds = Math.floor((Date.now() - new Date(dateString).getTime()) / 1000);
@@ -114,19 +123,17 @@ export const PostCard = ({
   };
 
   const handleLike = async () => {
-    if (!isAuthenticated) return; // Or show login modal
+    if (!isAuthenticated) return;
     if (isLiking) return;
 
     try {
       setIsLiking(true);
-      // Optimistic update
       const newLikedState = !liked;
       setLiked(newLikedState);
       setLikeCount(prev => newLikedState ? prev + 1 : Math.max(0, prev - 1));
 
       await likeRepo.toggleLike(postId);
     } catch (error) {
-      // Revert on error
       setLiked(!liked);
       setLikeCount(prev => !liked ? prev - 1 : prev + 1);
       console.error("Failed to toggle like:", error);
@@ -215,7 +222,6 @@ export const PostCard = ({
             </a>
           )}
 
-
           {/* Action Buttons */}
           <div className="flex items-center justify-between pt-2">
             <div className="flex gap-2 w-full">
@@ -227,8 +233,7 @@ export const PostCard = ({
                 disabled={isLiking}
               >
                 <Heart
-                  className={`w-4 h-4 transition-all ${liked ? "fill-current scale-110" : ""
-                    }`}
+                  className={`w-4 h-4 transition-all ${liked ? "fill-current scale-110" : ""}`}
                 />
                 <span className="text-xs font-medium">
                   {likeCount > 0 ? likeCount : "Like"}
@@ -242,16 +247,9 @@ export const PostCard = ({
                 onClick={() => setShowComments(!showComments)}
               >
                 <MessageSquare className={`w-4 h-4 ${showComments ? "text-blue-600" : ""}`} />
-                <span className="text-xs font-medium">Comments</span>
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                className="flex-1 gap-2 hover:bg-green-50 dark:hover:bg-green-950/20"
-              >
-                <Share2 className="w-4 h-4" />
-                <span className="text-xs font-medium">Share</span>
+                <span className="text-xs font-medium">
+                  {commentCount > 0 ? `${commentCount} ` : ""}Comments
+                </span>
               </Button>
             </div>
           </div>

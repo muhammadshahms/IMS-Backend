@@ -42,3 +42,15 @@ export interface LikeRemovedPayload {
     userId: string;
     likeCount: number;
 }
+
+export interface CommentLikeAddedPayload {
+    commentId: string;
+    like: Like;
+    likeCount: number;
+}
+
+export interface CommentLikeRemovedPayload {
+    commentId: string;
+    userId: string;
+    likeCount: number;
+}

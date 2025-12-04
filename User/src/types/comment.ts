@@ -13,6 +13,8 @@ export interface Comment {
     createdAt: string;
     updatedAt?: string;
     deletedAt?: string | null;
+    likeCount?: number;
+    userLiked?: boolean;
 }
 
 export interface CommentTree extends Comment {

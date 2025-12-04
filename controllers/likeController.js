@@ -1,8 +1,19 @@
 const likeModel = require("../models/LikeModel");
 const userPostModel = require("../models/userpostModel");
+const postModel = require("../models/postModel");
+const commentModel = require("../models/CommentModel");
 const { getIO } = require("../socket");
 
 const likeController = {};
+
+// Helper to find post in either model
+const findPost = async (postId) => {
+    let post = await userPostModel.findById(postId);
+    if (!post) {
+        post = await postModel.findById(postId);
+    }
+    return post;
+};
 
 // Toggle like - Like or unlike a post
 likeController.toggleLike = async (req, res) => {
@@ -12,8 +23,8 @@ likeController.toggleLike = async (req, res) => {
 
         console.log("👉 toggleLike called for:", postId, "by user:", userId);
 
-        // Check if post exists
-        const post = await userPostModel.findById(postId);
+        // Check if post exists in either model
+        const post = await findPost(postId);
         if (!post) {
             return res.status(404).json({ error: "Post not found" });
         }
@@ -81,6 +92,85 @@ likeController.toggleLike = async (req, res) => {
     }
 };
 
+// Toggle like for a comment
+likeController.toggleCommentLike = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        const userId = req.user.id;
+
+        console.log("👉 toggleCommentLike called for:", commentId, "by user:", userId);
+
+        // Check if comment exists
+        const comment = await commentModel.findById(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        const postId = comment.post;
+
+        // Check if user already liked the comment
+        const existingLike = await likeModel.findOne({ user: userId, comment: commentId });
+
+        if (existingLike) {
+            // Unlike - remove the like
+            await likeModel.findByIdAndDelete(existingLike._id);
+
+            // Get updated like count
+            const likeCount = await likeModel.countDocuments({ comment: commentId });
+
+            // Emit Socket.IO event
+            const io = getIO();
+            io.to(`post:${postId}`).emit("comment:like:removed", {
+                commentId,
+                userId,
+                likeCount,
+            });
+
+            return res.status(200).json({
+                message: "Comment unliked successfully",
+                liked: false,
+                likeCount,
+            });
+        } else {
+            // Like - create new like
+            const newLike = await likeModel.create({
+                user: userId,
+                comment: commentId,
+            });
+
+            // Populate user data
+            await newLike.populate("user", "name email");
+
+            // Get updated like count
+            const likeCount = await likeModel.countDocuments({ comment: commentId });
+
+            // Emit Socket.IO event
+            const io = getIO();
+            io.to(`post:${postId}`).emit("comment:like:added", {
+                commentId,
+                like: {
+                    _id: newLike._id,
+                    user: newLike.user,
+                    createdAt: newLike.createdAt,
+                },
+                likeCount,
+            });
+
+            return res.status(201).json({
+                message: "Comment liked successfully",
+                liked: true,
+                likeCount,
+            });
+        }
+    } catch (error) {
+        console.error("Error toggling comment like:", error);
+        return res.status(500).json({
+            error: "Server Error",
+            details: error.message,
+        });
+    }
+};
+
 // Get all likes for a post with pagination
 likeController.getLikesByPost = async (req, res) => {
     try {
@@ -91,8 +181,8 @@ likeController.getLikesByPost = async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
-        // Check if post exists
-        const post = await userPostModel.findById(postId);
+        // Check if post exists in either model
+        const post = await findPost(postId);
         if (!post) {
             console.log("❌ Post not found:", postId);
             return res.status(404).json({ error: "Post not found" });
@@ -128,6 +218,59 @@ likeController.getLikesByPost = async (req, res) => {
         });
     } catch (error) {
         console.error("Error fetching likes:", error);
+        return res.status(500).json({
+            error: "Server Error",
+            details: error.message,
+        });
+    }
+};
+
+// Get all likes for a comment with pagination
+likeController.getCommentLikes = async (req, res) => {
+    try {
+        const { commentId } = req.params;
+        console.log("🔍 getCommentLikes called for:", commentId);
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        // Check if comment exists
+        const comment = await commentModel.findById(commentId);
+        if (!comment) {
+            return res.status(404).json({ error: "Comment not found" });
+        }
+
+        // Get likes with pagination
+        const likes = await likeModel
+            .find({ comment: commentId })
+            .populate("user", "name email")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Get total count
+        const totalLikes = await likeModel.countDocuments({ comment: commentId });
+
+        // Check if current user liked the comment
+        const userLiked = req.user
+            ? await likeModel.exists({ user: req.user.id, comment: commentId })
+            : false;
+
+        return res.status(200).json({
+            data: likes,
+            pagination: {
+                currentPage: page,
+                totalPages: Math.ceil(totalLikes / limit),
+                totalItems: totalLikes,
+                itemsPerPage: limit,
+                hasNextPage: page * limit < totalLikes,
+                hasPrevPage: page > 1,
+            },
+            userLiked: !!userLiked,
+        });
+    } catch (error) {
+        console.error("Error fetching comment likes:", error);
         return res.status(500).json({
             error: "Server Error",
             details: error.message,

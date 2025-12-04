@@ -17,15 +17,18 @@ import {
     Reply,
     Send,
     X,
+    Heart,
 } from "lucide-react";
 import { CommentTree } from "@/types/comment";
 import { useAuthStore } from "@/hooks/store/authStore";
+import { cn } from "@/lib/utils";
 
 interface CommentItemProps {
     comment: CommentTree;
     onReply: (parentId: string, content: string) => void;
     onEdit: (id: string, content: string) => void;
     onDelete: (id: string) => void;
+    onLike: (id: string) => void;
     depth?: number;
 }
 
@@ -34,6 +37,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
     onReply,
     onEdit,
     onDelete,
+    onLike,
     depth = 0,
 }) => {
     const { user } = useAuthStore();
@@ -146,17 +150,32 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                                 {comment.content}
                             </p>
 
-                            {canReply && !isReplying && (
+                            <div className="flex items-center gap-4 pt-1">
+                                {canReply && !isReplying && (
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setIsReplying(true)}
+                                        className="h-7 text-xs px-2"
+                                    >
+                                        <Reply className="w-3 h-3 mr-1" />
+                                        Reply
+                                    </Button>
+                                )}
+
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setIsReplying(true)}
-                                    className="h-7 text-xs"
+                                    onClick={() => onLike(comment._id)}
+                                    className={cn(
+                                        "h-7 text-xs px-2 gap-1",
+                                        comment.userLiked && "text-red-500 hover:text-red-600"
+                                    )}
                                 >
-                                    <Reply className="w-3 h-3 mr-1" />
-                                    Reply
+                                    <Heart className={cn("w-3 h-3", comment.userLiked && "fill-current")} />
+                                    <span>{comment.likeCount || 0}</span>
                                 </Button>
-                            )}
+                            </div>
 
                             {isReplying && (
                                 <div className="space-y-2 pt-2">
@@ -211,6 +230,7 @@ export const CommentItem: React.FC<CommentItemProps> = ({
                             onReply={onReply}
                             onEdit={onEdit}
                             onDelete={onDelete}
+                            onLike={onLike}
                             depth={depth + 1}
                         />
                     ))}

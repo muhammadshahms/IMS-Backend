@@ -8,6 +8,7 @@ interface CommentState {
     addReply: (postId: string, parentId: string, reply: CommentTree) => void;
     updateComment: (postId: string, commentId: string, updatedComment: Partial<CommentTree>) => void;
     deleteComment: (postId: string, commentId: string) => void;
+    setCommentLike: (postId: string, commentId: string, liked: boolean, count: number) => void;
 }
 
 // Helper functions
@@ -78,6 +79,12 @@ export const useCommentStore = create<CommentState>((set) => ({
         comments: {
             ...state.comments,
             [postId]: removeCommentFromTree(state.comments[postId] || [], commentId)
+        }
+    })),
+    setCommentLike: (postId, commentId, liked, count) => set((state) => ({
+        comments: {
+            ...state.comments,
+            [postId]: updateCommentInTree(state.comments[postId] || [], commentId, { userLiked: liked, likeCount: count })
         }
     }))
 }));

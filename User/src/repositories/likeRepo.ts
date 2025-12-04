@@ -17,6 +17,21 @@ export class LikeRepo {
         );
         return response.data;
     }
+
+    async toggleCommentLike(commentId: string): Promise<LikeResponse> {
+        const response = await api.post<LikeResponse>(`/api/likes/toggle/comment/${commentId}`);
+        return response.data;
+    }
+
+    async getCommentLikes(commentId: string, page: number = 1, limit: number = 20): Promise<LikesListResponse> {
+        const response = await api.get<LikesListResponse>(
+            `/api/likes/comment/${commentId}`,
+            {
+                params: { page, limit }
+            }
+        );
+        return response.data;
+    }
 }
 
 export const likeRepo = new LikeRepo();
