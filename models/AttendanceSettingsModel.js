@@ -54,16 +54,16 @@ AttendanceSettingsSchema.statics.getSettings = async function () {
                     endHour: 15,
                     lateThresholdMinutes: 0,
                     earlyLeaveThresholdMinutes: 0,
-                    noCheckoutLateMinutes: 60,
+                    noCheckoutLateMinutes: 0,
                     minHoursForPresent: 4
                 },
                 Evening: {
                     name: "Evening",
                     startHour: 15,
                     endHour: 21,
-                    lateThresholdMinutes: 60,
-                    earlyLeaveThresholdMinutes: 60,
-                    noCheckoutLateMinutes: 60,
+                    lateThresholdMinutes: 0,
+                    earlyLeaveThresholdMinutes: 0,
+                    noCheckoutLateMinutes: 0,
                     minHoursForPresent: 4
                 }
             },
