@@ -49,21 +49,17 @@ AttendanceSettingsSchema.statics.getSettings = async function () {
         settings = await this.create({
             shifts: {
                 Morning: {
-                    name: "Morning",
                     startHour: 9,
                     endHour: 15,
-                    lateThresholdMinutes: 0,
-                    earlyLeaveThresholdMinutes: 0,
-                    noCheckoutLateMinutes: 0,
+                    lateThresholdMinutes: 60,
+                    earlyLeaveThresholdMinutes: 60,
                     minHoursForPresent: 4
                 },
                 Evening: {
-                    name: "Evening",
                     startHour: 15,
                     endHour: 21,
-                    lateThresholdMinutes: 0,
-                    earlyLeaveThresholdMinutes: 0,
-                    noCheckoutLateMinutes: 0,
+                    lateThresholdMinutes: 60,
+                    earlyLeaveThresholdMinutes: 60,
                     minHoursForPresent: 4
                 }
             },

@@ -44,23 +44,28 @@ const isWithinShiftHours = async (now, shiftConfig) => {
   return hour >= earliestCheckIn && hour < latestCheckIn;
 };
 
-// ✅ Helper: Calculate attendance status
+// ✅ FIXED: Calculate attendance status with proper early leave detection
 const calculateStatus = (checkInTime, checkOutTime, shiftConfig, now) => {
   const checkIn = moment(checkInTime).tz("Asia/Karachi");
   const checkOut = checkOutTime ? moment(checkOutTime).tz("Asia/Karachi") : null;
   const currentTime = now || moment().tz("Asia/Karachi");
 
-  // Shift times for the check-in day
+  // **FIX: Shift times based on check-in date, handle cross-day properly**
   const shiftStart = checkIn.clone().set({ hour: shiftConfig.startHour, minute: 0, second: 0 });
-  const shiftEnd = checkIn.clone().set({ hour: shiftConfig.endHour, minute: 0, second: 0 });
+  let shiftEnd = checkIn.clone().set({ hour: shiftConfig.endHour, minute: 0, second: 0 });
+  
+  // If shift end time is less than start time, it means shift crosses midnight
+  if (shiftConfig.endHour <= shiftConfig.startHour) {
+    shiftEnd.add(1, 'day');
+  }
 
-  // Late threshold (1 hour after shift start)
+  // Late threshold calculation
   const lateThreshold = shiftStart.clone().add(shiftConfig.lateThresholdMinutes, 'minutes');
   const isLate = checkIn.isAfter(lateThreshold);
 
   let lateByMinutes = 0;
   if (isLate) {
-    lateByMinutes = checkIn.diff(shiftStart, 'minutes');
+    lateByMinutes = checkIn.diff(lateThreshold, 'minutes');
   }
 
   let isEarlyLeave = false;
@@ -69,17 +74,17 @@ const calculateStatus = (checkInTime, checkOutTime, shiftConfig, now) => {
   let noCheckoutLate = false;
 
   if (checkOut) {
-    // Early leave threshold (1 hour before shift end)
+    // **FIX: Early leave threshold - subtract minutes from shift END time**
     const earlyLeaveThreshold = shiftEnd.clone().subtract(shiftConfig.earlyLeaveThresholdMinutes, 'minutes');
     isEarlyLeave = checkOut.isBefore(earlyLeaveThreshold);
 
     if (isEarlyLeave) {
-      earlyByMinutes = shiftEnd.diff(checkOut, 'minutes');
+      earlyByMinutes = earlyLeaveThreshold.diff(checkOut, 'minutes');
     }
 
     hoursWorked = checkOut.diff(checkIn, 'hours', true);
   } else {
-    // No checkout - check if we should mark as late (1 hour after shift end)
+    // No checkout - check if we should mark as late
     const noCheckoutThreshold = shiftEnd.clone().add(shiftConfig.noCheckoutLateMinutes || 60, 'minutes');
     if (currentTime.isAfter(noCheckoutThreshold)) {
       noCheckoutLate = true;
