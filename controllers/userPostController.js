@@ -1,9 +1,8 @@
 const userPostModel = require('../models/userpostModel');
 const User = require("../models/userModel");
-const path = require("path");
-const fs = require("fs");
 const paginate = require('../utils/paginate');
 const { getIO } = require("../socket");
+const mediaController = require('./mediaController');
 
 const userPostController = {};
 
@@ -25,18 +24,44 @@ userPostController.createUserPost = async (req, res) => {
       });
     }
 
-    // Create post with user ID
+    // Handle image upload
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = req.file.path; // Cloudinary returns the URL in path
+
+      // Create media record
+      await mediaController.createMediaRecord({
+        url: imageUrl,
+        publicId: req.file.filename, // Cloudinary public_id
+        type: 'post_image',
+        userId: userId,
+        postId: null, // Will update after post is created
+        file: req.file,
+      });
+    }
+
+    // Create post with user ID and image
     const newPost = await userPostModel.create({
       title,
       description,
       link,
+      image: imageUrl,
       user: userId
     });
+
+    // Update media record with post ID if image was uploaded
+    if (req.file && imageUrl) {
+      const Media = require('../models/MediaModel');
+      await Media.findOneAndUpdate(
+        { url: imageUrl, user: userId },
+        { post: newPost._id }
+      );
+    }
 
     // Post create hone ke baad user data populate karke return karo
     const populatedPost = await userPostModel
       .findById(newPost._id)
-      .populate("user", "name");
+      .populate("user", "name avatar");
 
     // Emit socket event
     const io = getIO();
@@ -74,7 +99,7 @@ userPostController.getUserPosts = async (req, res) => {
       limit,
       query: { deletedAt: null },  // filter
       sort: { createdAt: -1 },     // latest first
-      populate: { path: "user", select: "name" }, // populate
+      populate: { path: "user", select: "name avatar" }, // populate
     });
 
     res.status(200).json(result);
@@ -110,6 +135,29 @@ userPostController.updateUserPost = async (req, res) => {
       });
     }
 
+    // Handle image update
+    let imageUrl = post.image; // Keep existing image by default
+
+    if (req.file) {
+      // Delete old image from Cloudinary if exists
+      if (post.image) {
+        await mediaController.deleteMediaByPost(id);
+      }
+
+      // Set new image URL
+      imageUrl = req.file.path;
+
+      // Create new media record
+      await mediaController.createMediaRecord({
+        url: imageUrl,
+        publicId: req.file.filename,
+        type: 'post_image',
+        userId: userId,
+        postId: id,
+        file: req.file,
+      });
+    }
+
     // Update post
     const updatedPost = await userPostModel.findByIdAndUpdate(
       id,
@@ -117,10 +165,11 @@ userPostController.updateUserPost = async (req, res) => {
         title,
         description,
         link,
+        image: imageUrl,
         updatedAt: new Date(),
       },
       { new: true, runValidators: true }
-    ).populate("user", "name");
+    ).populate("user", "name avatar");
 
     // Emit socket event
     const io = getIO();
@@ -171,6 +220,11 @@ userPostController.deleteUserPost = async (req, res) => {
       });
     }
 
+    // Delete associated media from Cloudinary
+    if (post.image) {
+      await mediaController.deleteMediaByPost(id);
+    }
+
     // Soft delete (recommended)
     await userPostModel.findByIdAndUpdate(id, {
       deletedAt: new Date(),
@@ -179,9 +233,6 @@ userPostController.deleteUserPost = async (req, res) => {
     // Emit socket event
     const io = getIO();
     io.emit("post:deleted", { postId: id });
-
-    // Ya agar hard delete chahiye:
-    // await userPostModel.findByIdAndDelete(id);
 
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {

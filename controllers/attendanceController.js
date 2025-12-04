@@ -53,7 +53,7 @@ const calculateStatus = (checkInTime, checkOutTime, shiftConfig, now) => {
   // **FIX: Shift times based on check-in date, handle cross-day properly**
   const shiftStart = checkIn.clone().set({ hour: shiftConfig.startHour, minute: 0, second: 0 });
   let shiftEnd = checkIn.clone().set({ hour: shiftConfig.endHour, minute: 0, second: 0 });
-  
+
   // If shift end time is less than start time, it means shift crosses midnight
   if (shiftConfig.endHour <= shiftConfig.startHour) {
     shiftEnd.add(1, 'day');
@@ -530,10 +530,34 @@ attendanceController.getUserHistoryById = async (req, res) => {
       populate: null
     });
 
+    // Calculate total hours (dynamically from check-in/out times to handle old data)
+    const totalHoursResult = await Att.aggregate([
+      {
+        $match: {
+          user: user._id,
+          checkInTime: { $ne: null },
+          checkOutTime: { $ne: null }
+        }
+      },
+      {
+        $project: {
+          duration: {
+            $divide: [
+              { $subtract: ["$checkOutTime", "$checkInTime"] },
+              1000 * 60 * 60 // Convert milliseconds to hours
+            ]
+          }
+        }
+      },
+      { $group: { _id: null, total: { $sum: "$duration" } } }
+    ]);
+    const totalHours = totalHoursResult.length > 0 ? totalHoursResult[0].total : 0;
+
     res.json({
       user: { _id: user._id, name: user.name, email: user.email, shift: user.shift },
       history: result.data,
-      pagination: result.pagination
+      pagination: result.pagination,
+      totalHours: Math.round(totalHours * 100) / 100
     });
   } catch (err) {
     console.error("Get user history by ID error:", err);

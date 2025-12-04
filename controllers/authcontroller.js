@@ -39,16 +39,16 @@ authController.signupPost = async (req, res) => {
     const hash = await bcrypt.hash(password, salt);
 
     // Create user
-    await userModel.create({ 
-      bq_id, 
-      name, 
-      email, 
-      password: hash, 
-      phone, 
-      CNIC, 
-      course, 
-      gender, 
-      shift 
+    await userModel.create({
+      bq_id,
+      name,
+      email,
+      password: hash,
+      phone,
+      CNIC,
+      course,
+      gender,
+      shift
     });
 
     return res.status(201).json({ message: "Account created successfully" });
@@ -90,7 +90,7 @@ authController.signupGet = async (req, res) => {
       sort: { createdAt: -1, _id: 1 }, // latest users first
       populate: null
     });
-    
+
     res.status(200).json(result);
 
   } catch (error) {
@@ -123,7 +123,7 @@ authController.loginPost = async (req, res) => {
 
     // Generate token
     const token = UsertokenGenerator(user);
-    
+
     // Set cookie
     res.cookie("token", token, {
       httpOnly: true,
@@ -135,11 +135,12 @@ authController.loginPost = async (req, res) => {
     // Send response
     res.status(200).json({
       message: "Login successful",
-      user: { 
-        id: user._id, 
-        email: user.email, 
+      user: {
+        id: user._id,
+        email: user.email,
         name: user.name,
-        bq_id: user.bq_id 
+        bq_id: user.bq_id,
+        avatar: user.avatar
       },
     });
   } catch (error) {
@@ -152,13 +153,13 @@ authController.loginPost = async (req, res) => {
 authController.loginGet = async (req, res) => {
   try {
     const userId = req.user.id;
-    
+
     const user = await userModel.findById(userId).select('-password'); // Exclude password
-    
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    
+
     return res.status(200).json({
       message: "User fetched successfully",
       user,
@@ -180,7 +181,7 @@ authController.logout = async (req, res) => {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     });
-    
+
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
     console.error('Error logging out:', error);
@@ -211,8 +212,8 @@ authController.updateUser = async (req, res) => {
 
     // Check if new email is already taken by another user
     if (email && email !== user.email) {
-      const existingEmail = await userModel.findOne({ 
-        email, 
+      const existingEmail = await userModel.findOne({
+        email,
         _id: { $ne: _id } // Exclude current user
       });
       if (existingEmail) {
@@ -225,9 +226,9 @@ authController.updateUser = async (req, res) => {
 
     // Check if new BQ ID is already taken by another user
     if (bq_id && bq_id !== user.bq_id) {
-      const existingBqId = await userModel.findOne({ 
-        bq_id, 
-        _id: { $ne: _id } 
+      const existingBqId = await userModel.findOne({
+        bq_id,
+        _id: { $ne: _id }
       });
       if (existingBqId) {
         return res.status(400).json({
@@ -239,7 +240,7 @@ authController.updateUser = async (req, res) => {
 
     // Update user
     await userModel.findByIdAndUpdate(
-      _id, 
+      _id,
       { bq_id, name, email, phone, CNIC, course, gender, shift },
       { new: true, runValidators: true }
     );
@@ -267,7 +268,7 @@ authController.deleteUser = async (req, res) => {
 
     // Delete user
     const deleted = await userModel.findByIdAndDelete(_id);
-    
+
     if (!deleted) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -275,6 +276,59 @@ authController.deleteUser = async (req, res) => {
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Server Error', details: error.message });
+  }
+};
+
+// ✅ Update user avatar
+authController.updateAvatar = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    // Check if Cloudinary storage was used
+    const { isCloudinaryConfigured } = require('../config/multerconfig');
+
+    if (!isCloudinaryConfigured) {
+      return res.status(503).json({
+        message: "Image upload is not available. Cloudinary credentials are not configured.",
+        hint: "Please add CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET to your .env.development file"
+      });
+    }
+
+    const avatarUrl = req.file.path; // Cloudinary URL
+
+    // Import media controller for helper functions
+    const mediaController = require('./mediaController');
+
+    // Delete old avatar if exists
+    await mediaController.deleteOldAvatar(userId);
+
+    // Create new media record for avatar
+    await mediaController.createMediaRecord({
+      url: avatarUrl,
+      publicId: req.file.filename,
+      type: 'avatar',
+      userId: userId,
+      file: req.file,
+    });
+
+    // Update user avatar field
+    const updatedUser = await userModel.findByIdAndUpdate(
+      userId,
+      { avatar: avatarUrl },
+      { new: true }
+    ).select('-password');
+
+    res.status(200).json({
+      message: "Avatar updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Error updating avatar:', error);
     res.status(500).json({ message: 'Server Error', details: error.message });
   }
 };

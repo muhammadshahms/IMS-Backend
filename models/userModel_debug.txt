@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+﻿const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   bq_id: String,
@@ -36,10 +36,6 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "team",
   },
-  avatar: {
-    type: String,
-    default: null,
-  },
 });
 
 // Pre-save hook to generate incubation_id
@@ -48,8 +44,8 @@ userSchema.pre("save", async function (next) {
     try {
       // Find the user with the highest incubation_id (excluding null values)
       const lastUser = await this.constructor
-        .findOne({
-          incubation_id: { $exists: true, $ne: null, $regex: /^inc-\d+$/ }
+        .findOne({ 
+          incubation_id: { $exists: true, $ne: null, $regex: /^inc-\d+$/ } 
         })
         .sort({ incubation_id: -1 })
         .limit(1);
@@ -59,7 +55,7 @@ userSchema.pre("save", async function (next) {
       if (lastUser && lastUser.incubation_id) {
         // Extract the number from the last incubation_id (e.g., "inc-0001" -> 1)
         const lastNumber = parseInt(lastUser.incubation_id.split("-")[1]);
-
+        
         // Check if parsing was successful
         if (!isNaN(lastNumber)) {
           nextNumber = lastNumber + 1;

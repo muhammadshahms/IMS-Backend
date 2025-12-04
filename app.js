@@ -5,11 +5,6 @@ const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const dotenv = require("dotenv");
 const http = require("http");
-const indexRoute = require("./routes/indexRoute");
-const commentRoute = require("./routes/commentRoute");
-const likeRoute = require("./routes/likeRoute");
-const Half_day_checker = require("./cron/Half_day_checker");
-const { initializeSocket } = require("./socket");
 
 // 🧠 Load environment variables only in local development
 if (process.env.NODE_ENV !== "production") {
@@ -23,6 +18,12 @@ if (process.env.NODE_ENV !== "production") {
 } else {
   console.log("🚀 Running in production mode (Vercel environment vars)");
 }
+
+const indexRoute = require("./routes/indexRoute");
+const commentRoute = require("./routes/commentRoute");
+const likeRoute = require("./routes/likeRoute");
+const Half_day_checker = require("./cron/Half_day_checker");
+const { initializeSocket } = require("./socket");
 require("./config/db")();
 const app = express();
 

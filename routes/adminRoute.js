@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const postController = require("../controllers/postcontroller");
-const upload = require("../config/multerconfig");
+const { uploadPostImage } = require("../config/multerconfig");
 const PMcontroller = require("../controllers/PMcontroller");
 const { TeamController } = require("../controllers/teamcontroller");
 const { ProjectController } = require("../controllers/projectcontroller");
@@ -15,9 +15,9 @@ router.post("/login", adminController.loginAdmin)
 router.post("/create", adminController.createAdmin)
 
 //admin access posts
-router.post("/post", upload.single('image'), postController.createPost)
+router.post("/post", uploadPostImage.single('image'), postController.createPost)
 router.get("/post", postController.getPosts)
-router.put("/post/:id", upload.single('image'), postController.updatePost)
+router.put("/post/:id", uploadPostImage.single('image'), postController.updatePost)
 router.delete("/post/:id", postController.deletePost)
 
 //admin access PMs
