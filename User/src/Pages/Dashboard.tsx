@@ -3,7 +3,6 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
 import { userRepo } from "../repositories/userRepo"
 import { attRepo } from "../repositories/attRepo"
 import { postRepo } from "../repositories/postRepo"
@@ -21,7 +20,9 @@ import {
   XCircle,
   LogIn,
   LogOut,
-  Megaphone
+  Megaphone,
+  Sun,
+  Moon
 } from "lucide-react"
 import {
   BarChart,
@@ -34,8 +35,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   Legend,
   AreaChart,
   Area
@@ -47,6 +46,8 @@ interface AttendanceRecord {
   checkInTime: string | null
   checkOutTime: string | null
   status: string
+  shift?: string
+  hoursWorked?: number
 }
 
 interface PostStat {
@@ -86,7 +87,6 @@ const Dashboard = () => {
         setLoading(false)
         return
       }
-
       try {
         const res = await userRepo.profile()
         setUser(res.data)
@@ -115,17 +115,17 @@ const Dashboard = () => {
         const history = historyRes.history || []
         setAttendanceHistory(history)
 
-        // Calculate attendance stats
+        // Calculate attendance stats (handles new statuses)
         const presentCount = history.filter((h: any) => h.status === 'Present').length
         const absentCount = history.filter((h: any) => h.status === 'Absent').length
-        const lateCount = history.filter((h: any) => h.status === 'Late').length
+        const lateCount = history.filter((h: any) => h.status?.includes('Late')).length
         setAttendanceStats({ present: presentCount, absent: absentCount, late: lateCount })
 
         // Fetch user's posts
         const postsRes = await postRepo.getAllUsersPosts(1, 100)
         const userPosts = (postsRes.data || []).filter((p: any) => p.user === user._id || p.user?._id === user._id)
 
-        // Fetch like and comment counts for each post
+        // Fetch like and comment counts
         let likesTotal = 0
         let commentsTotal = 0
         const postsWithStats: PostStat[] = []
@@ -202,9 +202,9 @@ const Dashboard = () => {
   // Weekly attendance data (last 7 records)
   const weeklyAttendanceData = attendanceHistory.slice(0, 7).reverse().map(record => ({
     date: new Date(record.createdAt).toLocaleDateString('en-US', { weekday: 'short' }),
-    hours: record.checkInTime && record.checkOutTime
+    hours: record.hoursWorked || (record.checkInTime && record.checkOutTime
       ? Math.round((new Date(record.checkOutTime).getTime() - new Date(record.checkInTime).getTime()) / (1000 * 60 * 60) * 10) / 10
-      : 0
+      : 0)
   }))
 
   const isCheckedIn = Boolean(todayAttendance?.checkInTime)
@@ -223,6 +223,12 @@ const Dashboard = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {todayAttendance?.shift && (
+            <Badge variant="outline" className="gap-1">
+              {todayAttendance.shift === 'Morning' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+              {todayAttendance.shift}
+            </Badge>
+          )}
           {isCheckedIn ? (
             <Badge variant="default" className="bg-green-500 hover:bg-green-600">
               <CheckCircle2 className="w-3 h-3 mr-1" />
@@ -314,6 +320,18 @@ const Dashboard = () => {
           <CardContent>
             {isCheckedIn ? (
               <div className="space-y-4">
+                {/* Shift Badge */}
+                {todayAttendance?.shift && (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="gap-1">
+                      {todayAttendance.shift === 'Morning' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                      {todayAttendance.shift} Shift
+                    </Badge>
+                    {todayAttendance.isLate && <Badge className="bg-yellow-500">Late</Badge>}
+                    {todayAttendance.isEarlyLeave && <Badge className="bg-orange-500">Early Leave</Badge>}
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
@@ -322,7 +340,7 @@ const Dashboard = () => {
                     <div>
                       <p className="font-medium">Check-in Time</p>
                       <p className="text-sm text-muted-foreground">
-                        {new Date(todayAttendance.checkInTime).toLocaleTimeString()}
+                        {new Date(todayAttendance.checkInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
                   </div>
@@ -330,20 +348,41 @@ const Dashboard = () => {
                 </div>
 
                 {isCheckedOut && (
-                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
-                        <LogOut className="h-5 w-5 text-white" />
+                  <>
+                    <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center">
+                          <LogOut className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Check-out Time</p>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(todayAttendance.checkOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">Check-out Time</p>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(todayAttendance.checkOutTime).toLocaleTimeString()}
-                        </p>
-                      </div>
+                      <Badge variant="secondary">Completed</Badge>
                     </div>
-                    <Badge variant="secondary">Completed</Badge>
-                  </div>
+
+                    {/* Hours Worked */}
+                    <div className="flex items-center justify-between p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-purple-500 flex items-center justify-center">
+                          <Clock className="h-5 w-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-medium">Hours Worked</p>
+                          <p className={`text-sm ${(todayAttendance.hoursWorked || 0) >= 4 ? 'text-green-600' : 'text-red-500'}`}>
+                            {todayAttendance.hoursWorked?.toFixed(1) || 0}h
+                            {(todayAttendance.hoursWorked || 0) >= 4 && <CheckCircle2 className="w-3 h-3 inline ml-1" />}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className={todayAttendance.status === 'Present' ? 'bg-green-500' : 'bg-yellow-500'}>
+                        {todayAttendance.status}
+                      </Badge>
+                    </div>
+                  </>
                 )}
               </div>
             ) : (
@@ -352,7 +391,7 @@ const Dashboard = () => {
                   <Clock className="h-8 w-8 text-muted-foreground" />
                 </div>
                 <p className="text-muted-foreground">You haven't checked in today</p>
-                <p className="text-sm text-muted-foreground mt-1">Use the check-in button in the header to mark your attendance</p>
+                <p className="text-sm text-muted-foreground mt-1">Use the check-in button in the header</p>
               </div>
             )}
           </CardContent>

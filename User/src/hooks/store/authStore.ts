@@ -10,6 +10,7 @@ interface User {
   phone: string
   CNIC: string
   course: string
+  shift?: 'Morning' | 'Evening'
 }
 
 interface AuthState {
