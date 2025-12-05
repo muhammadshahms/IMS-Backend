@@ -87,7 +87,7 @@ commentController.createComment = async (req, res) => {
     // Populate user data
     const populatedComment = await commentModel
       .findById(newComment._id)
-      .populate("user", "name");
+      .populate("user", "name avatar");
 
     // Emit socket event to post room
     try {
@@ -131,7 +131,7 @@ commentController.getCommentsByPost = async (req, res) => {
     // We need all comments to build the tree
     const allComments = await commentModel
       .find({ post: postId, deletedAt: null })
-      .populate("user", "name")
+      .populate("user", "name avatar")
       .sort({ createdAt: -1 })
       .lean();
 
@@ -195,7 +195,7 @@ commentController.updateComment = async (req, res) => {
         updatedAt: new Date(),
       },
       { new: true, runValidators: true }
-    ).populate("user", "name");
+    ).populate("user", "name avatar");
 
     // Emit socket event to post room
     try {
