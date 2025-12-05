@@ -132,9 +132,10 @@ authController.loginPost = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Send response
+    // Send response with token for socket auth (cookies don't work cross-origin on Vercel)
     res.status(200).json({
       message: "Login successful",
+      token, // Include token for socket.io auth
       user: {
         id: user._id,
         email: user.email,
