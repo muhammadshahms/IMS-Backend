@@ -58,6 +58,14 @@ const userSchema = new mongoose.Schema({
   refreshToken: {
     type: String,
   },
+  termsAccepted: {
+    type: Boolean,
+    required: true,
+  },
+  termsAcceptedAt: {
+    type: Date,
+    default: Date.now,
+  },
 });
 
 // Pre-save hook to generate incubation_id

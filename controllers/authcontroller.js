@@ -14,7 +14,7 @@ const isValidObjectId = (id) => {
 // ✅ Signup - Create new user
 authController.signupPost = async (req, res) => {
   try {
-    const { bq_id, name, email, password, phone, CNIC, course, gender, shift, dob } = req.validatedData;
+    const { bq_id, name, email, password, phone, CNIC, course, gender, shift, dob, termsAccepted } = req.validatedData;
 
     // Check if BQ ID already exists
     const existingbq_id = await userModel.findOne({ bq_id });
@@ -70,7 +70,8 @@ authController.signupPost = async (req, res) => {
       course,
       gender,
       shift,
-      dob
+      dob,
+      termsAccepted
     });
 
     return res.status(201).json({ message: "Account created successfully" });
