@@ -109,6 +109,105 @@ userPostController.getUserPosts = async (req, res) => {
   }
 };
 
+// ✅ OPTIMIZED: Get User Posts with Stats (likeCount, commentCount) in single query
+userPostController.getUserPostsWithStats = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const userId = req.query.userId; // Optional: filter by user
+
+    const skip = (page - 1) * limit;
+
+    // Build match query
+    const matchQuery = { deletedAt: null };
+    if (userId) {
+      const mongoose = require('mongoose');
+      matchQuery.user = new mongoose.Types.ObjectId(userId);
+    }
+
+    // Aggregation pipeline with $lookup for likes and comments
+    const pipeline = [
+      { $match: matchQuery },
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      // Lookup user info
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'userInfo'
+        }
+      },
+      // Lookup likes count
+      {
+        $lookup: {
+          from: 'likes',
+          localField: '_id',
+          foreignField: 'post',
+          as: 'likes'
+        }
+      },
+      // Lookup comments count
+      {
+        $lookup: {
+          from: 'comments',
+          let: { postId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$post', '$$postId'] }, deletedAt: null } }
+          ],
+          as: 'comments'
+        }
+      },
+      // Add computed fields
+      {
+        $addFields: {
+          likeCount: { $size: '$likes' },
+          commentCount: { $size: '$comments' },
+          user: { $arrayElemAt: ['$userInfo', 0] }
+        }
+      },
+      // Project only needed fields
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          description: 1,
+          link: 1,
+          image: 1,
+          createdAt: 1,
+          likeCount: 1,
+          commentCount: 1,
+          'user._id': 1,
+          'user.name': 1,
+          'user.avatar': 1
+        }
+      }
+    ];
+
+    const posts = await userPostModel.aggregate(pipeline);
+
+    // Get total count for pagination
+    const totalCount = await userPostModel.countDocuments(matchQuery);
+    const totalPages = Math.ceil(totalCount / limit);
+
+    res.status(200).json({
+      data: posts,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        total: totalCount,
+        limit,
+        hasMore: page < totalPages
+      }
+    });
+  } catch (error) {
+    console.error("Error getting posts with stats:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
+};
+
 // Update User Post
 userPostController.updateUserPost = async (req, res) => {
   try {
