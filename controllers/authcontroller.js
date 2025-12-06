@@ -109,7 +109,7 @@ authController.signupGet = async (req, res) => {
       model: userModel,
       page,
       limit,
-      query: {}, // get all users
+      query: { deletedAt: null }, // get all non-deleted users
       sort: { createdAt: -1, _id: 1 }, // latest users first
       populate: null
     });
@@ -131,7 +131,7 @@ authController.loginPost = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await userModel.findOne({ email });
+    const user = await userModel.findOne({ email, deletedAt: null });
     if (!user) {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
@@ -228,7 +228,7 @@ authController.refreshAccessToken = async (req, res) => {
       .update(refreshToken)
       .digest('hex');
 
-    const user = await userModel.findOne({ refreshToken: hashedRefreshToken });
+    const user = await userModel.findOne({ refreshToken: hashedRefreshToken, deletedAt: null });
 
     if (!user) {
       return res.status(403).json({ message: "Invalid refresh token" });
@@ -380,8 +380,12 @@ authController.deleteUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid User ID format" });
     }
 
-    // Delete user
-    const deleted = await userModel.findByIdAndDelete(_id);
+    // Soft delete user
+    const deleted = await userModel.findByIdAndUpdate(
+      _id,
+      { deletedAt: new Date() },
+      { new: true }
+    );
 
     if (!deleted) {
       return res.status(404).json({ error: "User not found" });

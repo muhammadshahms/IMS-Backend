@@ -461,7 +461,7 @@ attendanceController.getAttendanceHistory = async (req, res) => {
       model: Att,
       page,
       limit,
-      query: {},
+      query: { deletedAt: null },
       sort: { createdAt: -1, _id: 1 },
       populate: { path: "user", select: "name email shift" }
     });
@@ -491,7 +491,7 @@ attendanceController.getUserHistoryByName = async (req, res) => {
       model: Att,
       page,
       limit,
-      query: { user: user._id },
+      query: { user: user._id, deletedAt: null },
       sort: { createdAt: -1, _id: 1 },
       populate: null
     });
@@ -525,7 +525,7 @@ attendanceController.getUserHistoryById = async (req, res) => {
       model: Att,
       page,
       limit,
-      query: { user: user._id },
+      query: { user: user._id, deletedAt: null },
       sort: { createdAt: -1, _id: 1 },
       populate: null
     });
@@ -536,7 +536,8 @@ attendanceController.getUserHistoryById = async (req, res) => {
         $match: {
           user: user._id,
           checkInTime: { $ne: null },
-          checkOutTime: { $ne: null }
+          checkOutTime: { $ne: null },
+          deletedAt: null
         }
       },
       {
@@ -601,7 +602,7 @@ attendanceController.updateAttendanceRecord = async (req, res) => {
   }
 };
 
-// ✅ 9. Delete Attendance Record
+// ✅ 9. Delete Attendance Record (Soft Delete)
 attendanceController.deleteAttendanceRecord = async (req, res) => {
   try {
     const { attendanceId } = req.params;
@@ -610,7 +611,11 @@ attendanceController.deleteAttendanceRecord = async (req, res) => {
       return res.status(400).json({ error: "Valid Attendance ID is required" });
     }
 
-    const deleted = await Att.findByIdAndDelete(attendanceId);
+    const deleted = await Att.findByIdAndUpdate(
+      attendanceId,
+      { deletedAt: new Date() },
+      { new: true }
+    );
     if (!deleted) return res.status(404).json({ error: "Record not found" });
 
     res.json({ message: "Attendance record deleted" });

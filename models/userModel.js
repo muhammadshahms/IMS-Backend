@@ -66,6 +66,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 });
 
 // Pre-save hook to generate incubation_id

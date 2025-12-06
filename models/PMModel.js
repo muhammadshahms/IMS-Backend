@@ -8,14 +8,19 @@ const PMSchema = new mongoose.Schema({
         type: String,
     },
 
-    project: 
-       { type:mongoose.Schema.Types.ObjectId,
-        ref:"project"
-       }
-,
+    project:
+    {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "project"
+    }
+    ,
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    deletedAt: {
+        type: Date,
+        default: null
     }
 })
 

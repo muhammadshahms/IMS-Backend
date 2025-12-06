@@ -12,7 +12,7 @@ ProjectController.getProjects = async (req, res) => {
       model: Project,
       page,
       limit,
-      query: {},  // fetch all projects
+      query: { deletedAt: null },  // fetch all non-deleted projects
       sort: { createdAt: -1 }, // latest projects first
       populate: [
         { path: "teamName", select: "teamName" },
@@ -99,14 +99,21 @@ ProjectController.updateProject = async (req, res) => {
 };
 
 ProjectController.deleteProject = async (req, res) => {
-    try {
-        const { id } = req.params
-        await Project.findByIdAndDelete(id)
-        res.status(200).json({ message: "Project deleted successfully" })
-    } catch (error) {
-        console.error("Error deleting Project:", error);
-        return res.status(500).json({ message: "Server Error" });
+  try {
+    const { id } = req.params;
+    const deleted = await Project.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date() },
+      { new: true }
+    );
+    if (!deleted) {
+      return res.status(404).json({ message: "Project not found" });
     }
+    res.status(200).json({ message: "Project deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting Project:", error);
+    return res.status(500).json({ message: "Server Error" });
+  }
 }
 
 module.exports = { ProjectController };

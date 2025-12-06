@@ -26,14 +26,19 @@ const teamSchema = new mongoose.Schema(
 
     field: {
       type: String,
-      enum: ["Web Development", "Graphic Designing", "Digital Marketing","Data Science","Data Analytics","Cyber Security","Mobile App Development"],
+      enum: ["Web Development", "Graphic Designing", "Digital Marketing", "Data Science", "Data Analytics", "Cyber Security", "Mobile App Development"],
       required: true
     },
 
-    project:{
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "project",
-  }
-});
+    project: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "project",
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+  });
 
 module.exports = mongoose.model("team", teamSchema);

@@ -8,14 +8,9 @@ PMcontroller.createPM = async (req, res) => {
     try {
         const { name, email, password, role, projects } = req.body;
 
-        const existingPM = await PMModel.findOne({ email });
+        const existingPM = await PMModel.findOne({ email, deletedAt: null });
         if (existingPM) {
             return res.status(400).json({ message: "PM already exists" });
-        }
-
-        const existingEmail = await PMModel.findOne({ email });
-        if (existingEmail) {
-            return res.status(400).json({ message: "Email already exists" });
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -30,24 +25,24 @@ PMcontroller.createPM = async (req, res) => {
 }
 
 PMcontroller.getPMs = async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
 
-    const result = await paginate({
-      model: PMModel,
-      page,
-      limit,
-      query: {}, // all PMs
-      sort: { createdAt: -1 }, // latest PM first
-      populate: null
-    });
+        const result = await paginate({
+            model: PMModel,
+            page,
+            limit,
+            query: { deletedAt: null }, // all non-deleted PMs
+            sort: { createdAt: -1 }, // latest PM first
+            populate: null
+        });
 
-    res.status(200).json(result);
+        res.status(200).json(result);
 
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 };
 
 
@@ -66,7 +61,14 @@ PMcontroller.updatePM = async (req, res) => {
 PMcontroller.deletePM = async (req, res) => {
     try {
         const { id } = req.params;
-        await PMModel.findByIdAndDelete(id);
+        const deleted = await PMModel.findByIdAndUpdate(
+            id,
+            { deletedAt: new Date() },
+            { new: true }
+        );
+        if (!deleted) {
+            return res.status(404).json({ message: "PM not found" });
+        }
         res.status(200).json({ message: "PM deleted successfully" });
     } catch (error) {
         res.status(500).json({ message: error.message });

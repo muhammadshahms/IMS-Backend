@@ -9,7 +9,7 @@ mediaController.getMediaByUser = async (req, res) => {
         const userId = req.user.id;
         const { type, page = 1, limit = 20 } = req.query;
 
-        const query = { user: userId };
+        const query = { user: userId, deletedAt: null };
         if (type) {
             query.type = type;
         }
@@ -58,8 +58,8 @@ mediaController.deleteMedia = async (req, res) => {
             await cloudinary.uploader.destroy(media.publicId);
         }
 
-        // Delete from database
-        await Media.findByIdAndDelete(id);
+        // Soft delete from database (keep Cloudinary deletion for storage)
+        await Media.findByIdAndUpdate(id, { deletedAt: new Date() });
 
         res.status(200).json({ message: 'Media deleted successfully' });
     } catch (error) {
@@ -91,7 +91,7 @@ mediaController.createMediaRecord = async ({ url, publicId, type, userId, postId
 // Helper function to delete media by post
 mediaController.deleteMediaByPost = async (postId) => {
     try {
-        const mediaList = await Media.find({ post: postId });
+        const mediaList = await Media.find({ post: postId, deletedAt: null });
 
         for (const media of mediaList) {
             if (media.publicId) {
@@ -99,7 +99,7 @@ mediaController.deleteMediaByPost = async (postId) => {
             }
         }
 
-        await Media.deleteMany({ post: postId });
+        await Media.updateMany({ post: postId }, { deletedAt: new Date() });
     } catch (error) {
         console.error('Error deleting media by post:', error);
         throw error;
@@ -109,13 +109,13 @@ mediaController.deleteMediaByPost = async (postId) => {
 // Helper function to delete old avatar
 mediaController.deleteOldAvatar = async (userId) => {
     try {
-        const oldAvatar = await Media.findOne({ user: userId, type: 'avatar' });
+        const oldAvatar = await Media.findOne({ user: userId, type: 'avatar', deletedAt: null });
 
         if (oldAvatar) {
             if (oldAvatar.publicId) {
                 await cloudinary.uploader.destroy(oldAvatar.publicId);
             }
-            await Media.findByIdAndDelete(oldAvatar._id);
+            await Media.findByIdAndUpdate(oldAvatar._id, { deletedAt: new Date() });
         }
     } catch (error) {
         console.error('Error deleting old avatar:', error);

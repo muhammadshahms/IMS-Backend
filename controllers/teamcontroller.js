@@ -15,7 +15,7 @@ TeamController.teamGet = async (req, res) => {
       model: Team,
       page,
       limit,
-      query: {},  // all teams
+      query: { deletedAt: null },  // all non-deleted teams
       sort: { createdAt: -1 },  // latest teams first
       populate: { path: "members.user", select: "name" }  // populate nested members
     });
@@ -101,7 +101,7 @@ TeamController.updateteam = async (req, res) => {
     if (validUsers.length !== userIds.length) {
       return res.status(400).json({ message: "Invalid user IDs in members" });
 
- 
+
     }
 
     await Team.findByIdAndUpdate(id, { teamName, members, field }, { new: true });
@@ -114,7 +114,14 @@ TeamController.updateteam = async (req, res) => {
 TeamController.deleteteam = async (req, res) => {
   try {
     const { id } = req.params;
-    await Team.findByIdAndDelete(id);
+    const deleted = await Team.findByIdAndUpdate(
+      id,
+      { deletedAt: new Date() },
+      { new: true }
+    );
+    if (!deleted) {
+      return res.status(404).json({ message: "Team not found" });
+    }
     res.status(200).json({ message: "Team deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
