@@ -1,16 +1,28 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-  bq_id: String,
+  bq_id: {
+    type: String,
+    unique: true,
+  },
   incubation_id: {
     type: String,
     unique: true,
   },
   name: String,
-  email: String,
+  email: {
+    type: String,
+    unique: true,
+  },
   password: String,
   phone: String,
-  CNIC: String,
+  CNIC: {
+    type: String,
+    unique: true,
+  },
+  dob: {
+    type: Date,
+  },
   gender: {
     type: String,
     enum: ["Male", "Female"],
@@ -29,6 +41,9 @@ const userSchema = new mongoose.Schema({
       "Data Analytics",
       "Cyber Security",
       "Mobile App Development",
+      "E-commerce",
+      "Content Writing",
+      "Video Editing",
     ],
     required: true,
   },
@@ -39,6 +54,9 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: null,
+  },
+  refreshToken: {
+    type: String,
   },
 });
 

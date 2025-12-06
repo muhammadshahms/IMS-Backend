@@ -13,6 +13,7 @@ router.get("/signup", authController.signupGet)
 router.post("/signup", validate(registerSchema), authController.signupPost)
 router.post("/login", authController.loginPost)
 router.get("/profile", protect, authController.loginGet)
+router.post("/refresh-token", authController.refreshAccessToken)
 
 router.post("/logout", authController.logout)
 router.put("/update/:_id", validate(updateRegisterSchema), authController.updateUser)

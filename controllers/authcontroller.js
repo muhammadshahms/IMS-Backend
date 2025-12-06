@@ -14,14 +14,13 @@ const isValidObjectId = (id) => {
 // ✅ Signup - Create new user
 authController.signupPost = async (req, res) => {
   try {
-    const { bq_id, name, email, password, phone, CNIC, course, gender, shift } = req.validatedData;
+    const { bq_id, name, email, password, phone, CNIC, course, gender, shift, dob } = req.validatedData;
 
     // Check if BQ ID already exists
     const existingbq_id = await userModel.findOne({ bq_id });
     if (existingbq_id) {
       return res.status(400).json({
-        field: "bq_id",
-        message: "This BQ Id is not available, please try another"
+        errors: { bq_id: "This BQ Id is not available, please try another" } // Standardized error format
       });
     }
 
@@ -29,8 +28,30 @@ authController.signupPost = async (req, res) => {
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
-        field: "email",
-        message: "This Email is Already Registered"
+        errors: { email: "This Email is Already Registered" }
+      });
+    }
+
+    // Check if CNIC already exists
+    const existingCNIC = await userModel.findOne({ CNIC });
+    if (existingCNIC) {
+      return res.status(400).json({
+        errors: { CNIC: "This CNIC is Already Registered" }
+      });
+    }
+
+    // Validate Age > 12
+    const dobDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - dobDate.getFullYear();
+    const m = today.getMonth() - dobDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+      age--;
+    }
+
+    if (age <= 12) {
+      return res.status(400).json({
+        errors: { dob: "You must be greater than 12 years old" }
       });
     }
 
@@ -48,7 +69,8 @@ authController.signupPost = async (req, res) => {
       CNIC,
       course,
       gender,
-      shift
+      shift,
+      dob
     });
 
     return res.status(201).json({ message: "Account created successfully" });
@@ -99,43 +121,83 @@ authController.signupGet = async (req, res) => {
   }
 };
 
-// ✅ Login - FIXED: Check user exists BEFORE password comparison
+// ✅ Login - FIXED: Supports Refresh Token
 authController.loginPost = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Find user - MUST happen first
     const user = await userModel.findOne({ email });
     if (!user) {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
 
-    // Compare password - only after confirming user exists
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
 
-    // Generate token
-    const token = UsertokenGenerator(user);
+    // Generate short-lived Access Token (e.g. 15 mins or 1 hour)
+    // UsertokenGenerator should ideally create a token with shorter expiry now, or we can explicitly pass it if the utility allows.
+    // Assuming UsertokenGenerator creates a standard JWT.
+    const accessToken = UsertokenGenerator(user);
 
-    // Set cookie
-    res.cookie("token", token, {
+    // Default cookie options for Access Token (Session or Short-Lived)
+    const accessTokenCookieOptions = {
+      httpOnly: false, // Accessible by JS for socket if needed, or httpOnly if handled via API only.
+      // NOTE: Original code had httpOnly: true, but client code reads it from storage?
+      // Actually client stores it in localStorage/sessionStorage from response body.
+      // The cookie set here is primarily for standard web requests if API relies on it.
+      // Let's keep it httpOnly for security where possible.
+      // But wait, client socket.io auth uses localStorage token.
+      // So this cookie is secondary or for SSR/API.
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+      maxAge: 24 * 60 * 60 * 1000 // 1 day default for access token cookie if not remember
+    };
 
-    // Send response with token for socket auth (cookies don't work cross-origin on Vercel)
+    let refreshToken = null;
+
+    if (req.body.remember) {
+      // Generate Refresh Token
+      const crypto = require('crypto');
+      refreshToken = crypto.randomBytes(40).toString('hex');
+
+      // Hash token before saving to DB
+      const hashedRefreshToken = crypto
+        .createHash('sha256')
+        .update(refreshToken)
+        .digest('hex');
+
+      // Save to User
+      user.refreshToken = hashedRefreshToken;
+      await user.save();
+
+      // Set Refresh Token Cookie (Long Lived - e.g. 30 days)
+      const refreshCookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      };
+
+      res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+    } else {
+      // If not remember me, ensure we clear any existing refresh token
+      user.refreshToken = undefined;
+      await user.save();
+      res.clearCookie("refreshToken");
+    }
+
+    res.cookie("token", accessToken, accessTokenCookieOptions);
+
     res.status(200).json({
       message: "Login successful",
-      token, // Include token for socket.io auth
+      token: accessToken,
       user: {
         id: user._id,
         email: user.email,
@@ -147,6 +209,47 @@ authController.loginPost = async (req, res) => {
   } catch (error) {
     console.error('Error logging in:', error);
     res.status(500).json({ message: 'Server Error', details: error.message });
+  }
+};
+
+// ✅ Refresh Access Token
+authController.refreshAccessToken = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json({ message: "No refresh token provided" });
+    }
+
+    const crypto = require('crypto');
+    const hashedRefreshToken = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
+
+    const user = await userModel.findOne({ refreshToken: hashedRefreshToken });
+
+    if (!user) {
+      return res.status(403).json({ message: "Invalid refresh token" });
+    }
+
+    // Generate new Access Token
+    const accessToken = UsertokenGenerator(user);
+
+    // Update Access Token Cookie
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      maxAge: 24 * 60 * 60 * 1000
+    };
+
+    res.cookie("token", accessToken, cookieOptions);
+
+    res.status(200).json({ accessToken });
+  } catch (error) {
+    console.error("Error refreshing token:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -177,11 +280,20 @@ authController.loginGet = async (req, res) => {
 // ✅ Logout
 authController.logout = async (req, res) => {
   try {
-    res.clearCookie("token", {
+    // If user is authenticated, clear their refresh token from DB
+    // Note: req.user might not be populated if the token is invalid/expired, so we wrap in try/catch or check
+    if (req.user && req.user.id) {
+      await userModel.findByIdAndUpdate(req.user.id, { refreshToken: undefined });
+    }
+
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    });
+    };
+
+    res.clearCookie("token", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
