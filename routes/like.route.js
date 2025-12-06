@@ -1,6 +1,6 @@
 const express = require("express");
-const likeController = require("../controllers/likeController");
-const { protect, optionalProtect } = require("../middlewares/auth");
+const likeController = require("../controllers/like.controller");
+const { protect, optionalProtect } = require("../middlewares/auth.middleware");
 
 const router = express.Router();
 

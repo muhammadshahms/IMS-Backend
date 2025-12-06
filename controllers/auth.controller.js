@@ -1,7 +1,7 @@
-const userModel = require("../models/userModel");
+const userModel = require("../models/user.model");
 const bcrypt = require("bcrypt");
-const { UsertokenGenerator } = require("../utils/token");
-const paginate = require("../utils/paginate");
+const { UsertokenGenerator } = require("../utils/token.util");
+const paginate = require("../utils/paginate.util");
 const mongoose = require("mongoose");
 
 const authController = {};
@@ -420,7 +420,7 @@ authController.updateAvatar = async (req, res) => {
     const avatarUrl = req.file.path; // Cloudinary URL
 
     // Import media controller for helper functions
-    const mediaController = require('./mediaController');
+    const mediaController = require('./media.controller');
 
     // Delete old avatar if exists
     await mediaController.deleteOldAvatar(userId);

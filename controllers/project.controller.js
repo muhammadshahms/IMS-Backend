@@ -1,5 +1,5 @@
-const Project = require("../models/projectModel");
-const paginate = require("../utils/paginate");
+const Project = require("../models/project.model");
+const paginate = require("../utils/paginate.util");
 ProjectController = {}
 
 

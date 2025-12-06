@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { protect } = require("../middlewares/auth");
-const mediaController = require("../controllers/mediaController");
+const { protect } = require("../middlewares/auth.middleware");
+const mediaController = require("../controllers/media.controller");
 
 // Get user's media
 router.get("/", protect, mediaController.getMediaByUser);

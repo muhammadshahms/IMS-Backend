@@ -1,7 +1,7 @@
-// controllers/commentController.js
-const commentModel = require('../models/CommentModel');
-const userPostModel = require('../models/userpostModel');
-const paginate = require('../utils/paginate');
+// controllers/comment.controller.js
+const commentModel = require('../models/comment.model');
+const userPostModel = require('../models/user-post.model');
+const paginate = require('../utils/paginate.util');
 const { getIO } = require('../socket');
 
 const commentController = {};

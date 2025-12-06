@@ -1,7 +1,7 @@
-const likeModel = require("../models/LikeModel");
-const userPostModel = require("../models/userpostModel");
-const postModel = require("../models/postModel");
-const commentModel = require("../models/CommentModel");
+const likeModel = require("../models/like.model");
+const userPostModel = require("../models/user-post.model");
+const postModel = require("../models/post.model");
+const commentModel = require("../models/comment.model");
 const { getIO } = require("../socket");
 
 const likeController = {};

@@ -1,8 +1,8 @@
-// routes/commentRoutes.js
+// routes/comment.route.js
 const express = require('express');
 const router = express.Router();
-const commentController = require('../controllers/commentController');
-const { protect } = require("../middlewares/auth");
+const commentController = require('../controllers/comment.controller');
+const { protect } = require("../middlewares/auth.middleware");
 
 router.post("/createcomment", protect, commentController.createComment);
 router.get("/post/:postId/comments", protect, commentController.getCommentsByPost);

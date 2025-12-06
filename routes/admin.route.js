@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
-const postController = require("../controllers/postcontroller");
-const { uploadPostImage } = require("../config/multerconfig");
-const PMcontroller = require("../controllers/PMcontroller");
-const { TeamController } = require("../controllers/teamcontroller");
-const { ProjectController } = require("../controllers/projectcontroller");
-const validate = require("../middlewares/FormValidator")
-const { TeamSchema, UpdateTeamSchema } = require("../validators/teamvalidations");
-const { ProjectSchema, UpdateProjectSchema } = require("../validators/ProjectValidations");
-const adminController = require("../controllers/adminController");
+const postController = require("../controllers/post.controller");
+const { uploadPostImage } = require("../config/multer.config");
+const PMcontroller = require("../controllers/pm.controller");
+const { TeamController } = require("../controllers/team.controller");
+const { ProjectController } = require("../controllers/project.controller");
+const validate = require("../middlewares/form-validator.middleware")
+const { TeamSchema, UpdateTeamSchema } = require("../validators/team.validation");
+const { ProjectSchema, UpdateProjectSchema } = require("../validators/project.validation");
+const adminController = require("../controllers/admin.controller");
 
 
 router.post("/login", adminController.loginAdmin)

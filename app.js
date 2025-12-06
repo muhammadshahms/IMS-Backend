@@ -19,12 +19,11 @@ if (process.env.NODE_ENV !== "production") {
   console.log("🚀 Running in production mode (Vercel environment vars)");
 }
 
-const indexRoute = require("./routes/indexRoute");
-const commentRoute = require("./routes/commentRoute");
-const likeRoute = require("./routes/likeRoute");
-const Half_day_checker = require("./cron/Half_day_checker");
+const indexRoute = require("./routes/index.route");
+const commentRoute = require("./routes/comment.route");
+const likeRoute = require("./routes/like.route");
 const { initializeSocket } = require("./socket");
-require("./config/db")();
+require("./config/db.config")();
 const app = express();
 
 // Create HTTP server
@@ -61,5 +60,3 @@ app.use("/api/likes", likeRoute);
 // Server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
-
-Half_day_checker();

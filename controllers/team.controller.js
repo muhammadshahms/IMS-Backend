@@ -1,7 +1,7 @@
 const { default: mongoose } = require('mongoose');
-const Team = require('../models/teamModel');
-const User = require("../models/userModel");
-const paginate = require('../utils/paginate');
+const Team = require('../models/team.model');
+const User = require("../models/user.model");
+const paginate = require('../utils/paginate.util');
 
 const TeamController = {};
 

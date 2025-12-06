@@ -1,6 +1,6 @@
-const PMModel = require("../models/PMModel");
+const PMModel = require("../models/pm.model");
 const bcrypt = require("bcrypt");
-const paginate = require("../utils/paginate");
+const paginate = require("../utils/paginate.util");
 
 const PMcontroller = {};
 

@@ -1,9 +1,9 @@
-const Att = require("../models/AttModel");
-const User = require("../models/userModel");
-const AttendanceSettings = require("../models/AttendanceSettingsModel");
+const Att = require("../models/attendance.model");
+const User = require("../models/user.model");
+const AttendanceSettings = require("../models/attendance-settings.model");
 const moment = require("moment-timezone");
 const mongoose = require("mongoose");
-const paginate = require("../utils/paginate");
+const paginate = require("../utils/paginate.util");
 
 const attendanceController = {};
 

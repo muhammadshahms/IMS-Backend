@@ -1,8 +1,8 @@
-const userPostModel = require('../models/userpostModel');
-const User = require("../models/userModel");
-const paginate = require('../utils/paginate');
+const userPostModel = require('../models/user-post.model');
+const User = require("../models/user.model");
+const paginate = require('../utils/paginate.util');
 const { getIO } = require("../socket");
-const mediaController = require('./mediaController');
+const mediaController = require('./media.controller');
 
 const userPostController = {};
 
@@ -51,7 +51,7 @@ userPostController.createUserPost = async (req, res) => {
 
     // Update media record with post ID if image was uploaded
     if (req.file && imageUrl) {
-      const Media = require('../models/MediaModel');
+      const Media = require('../models/media.model');
       await Media.findOneAndUpdate(
         { url: imageUrl, user: userId },
         { post: newPost._id }

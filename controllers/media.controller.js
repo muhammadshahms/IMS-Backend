@@ -1,5 +1,5 @@
-const Media = require('../models/MediaModel');
-const { cloudinary } = require('../config/multerconfig');
+const Media = require('../models/media.model');
+const { cloudinary } = require('../config/multer.config');
 
 const mediaController = {};
 

@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const attendanceController = require("../controllers/attendanceController");
-const validateObjectId = require("../middlewares/validateObjectId");
-const { protect } = require("../middlewares/auth");
+const attendanceController = require("../controllers/attendance.controller");
+const validateObjectId = require("../middlewares/validate-object-id.middleware");
+const { protect } = require("../middlewares/auth.middleware");
 
 // User routes
 router.post("/checkin/:_id", protect, attendanceController.checkin);

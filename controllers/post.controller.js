@@ -1,9 +1,8 @@
-// postController.js (Admin Posts)
-const postModel = require('../models/postModel');
+// post.controller.js (Admin Posts)
+const postModel = require('../models/post.model');
 const path = require("path");
 const fs = require("fs");
-const paginate = require('../utils/paginate');
-
+const paginate = require('../utils/paginate.util');
 
 const postController = {};
 
@@ -79,7 +78,7 @@ postController.updatePost = async (req, res) => {
 postController.deletePost = async (req, res) => {
   try {
     const { id } = req.params;
-    await postModel.findByIdAndDelete(id);
+    await postModel.findByIdAndUpdate(id, { deletedAt: new Date() });
     res.status(200).json({ message: "Post deleted successfully" });
   } catch (error) {
     console.error("Error deleting post:", error);

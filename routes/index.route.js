@@ -1,10 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const userRoute = require("./userRoute");
-const adminRoute = require("./adminRoute");
-const attendanceRoute = require("./attendanceRoute")
-const commentRoutes = require("./commentRoute");
-const mediaRoute = require("./mediaRoute");
+const userRoute = require("./user.route");
+const adminRoute = require("./admin.route");
+const attendanceRoute = require("./attendance.route")
+const commentRoutes = require("./comment.route");
+const mediaRoute = require("./media.route");
 
 router.use("/api/user", userRoute);
 router.use("/api/admin", adminRoute);

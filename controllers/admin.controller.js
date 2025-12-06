@@ -1,4 +1,4 @@
-const adminModel = require("../models/AdminModel") 
+const adminModel = require("../models/admin.model")
 const bcrypt = require("bcrypt")
 const jwt = require("jsonwebtoken")
 
@@ -8,7 +8,7 @@ const adminController = {}
 adminController.createAdmin = async (req, res) => {
   try {
     const plainPassword = "admin1234"
-    const hashedPassword = await bcrypt.hash(plainPassword, 10) 
+    const hashedPassword = await bcrypt.hash(plainPassword, 10)
 
     const admin = await adminModel.create({
       username: "admin",
@@ -40,8 +40,8 @@ adminController.loginAdmin = async (req, res) => {
       { expiresIn: "2h" }
     )
 
-    res.status(200).json({ 
-      message: "Login successful", 
+    res.status(200).json({
+      message: "Login successful",
       token,
       user: {
         id: admin._id,
