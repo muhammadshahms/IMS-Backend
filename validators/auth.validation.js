@@ -15,7 +15,7 @@ const registerSchema = z.object({
   }),
 });
 
-const updateRegisterSchema = registerSchema.omit({ password: true });
+const updateRegisterSchema = registerSchema.omit({ password: true, termsAccepted: true });
 
 
 // const updateRegisterSchema = z.object({
