@@ -200,7 +200,7 @@ authController.loginPost = async (req, res) => {
       message: "Login successful",
       token: accessToken,
       user: {
-        id: user._id,
+        _id: user._id,
         email: user.email,
         name: user.name,
         bq_id: user.bq_id,
