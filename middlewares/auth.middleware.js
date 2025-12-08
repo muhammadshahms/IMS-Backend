@@ -1,7 +1,16 @@
 const jwt = require("jsonwebtoken");
 
 exports.protect = (req, res, next) => {
-  const token = req.cookies.token;
+  let token;
+
+  // 1. Check Cookie
+  if (req.cookies.token) {
+    token = req.cookies.token;
+  }
+  // 2. Check Authorization Header (Bearer)
+  else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
 
   if (!token) {
     return res.status(401).json({ error: "No token" });
@@ -24,7 +33,13 @@ exports.protect = (req, res, next) => {
 };
 
 exports.optionalProtect = (req, res, next) => {
-  const token = req.cookies.token;
+  let token;
+
+  if (req.cookies.token) {
+    token = req.cookies.token;
+  } else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
+  }
 
   if (!token) {
     return next();

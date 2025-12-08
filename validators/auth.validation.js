@@ -3,7 +3,7 @@ const { z } = require('zod');
 const registerSchema = z.object({
   bq_id: z.string().min(5, 'BQ ID must be at least 5 characters'),
   name: z.string().min(3, 'Name is too short'),
-  email: z.string().email('Invalid email'),
+  email: z.string().email('Invalid email').toLowerCase(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
   phone: z.string().regex(/^92\d{10}$/, 'Phone must start with 92 and contain 12 digits'),
   CNIC: z.string().regex(/^\d{5}-\d{7}-\d$/, 'CNIC must be in xxxxx-xxxxxxx-x format'),

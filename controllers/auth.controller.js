@@ -131,7 +131,9 @@ authController.loginPost = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await userModel.findOne({ email, deletedAt: null });
+    const emailLower = email.toLowerCase();
+
+    const user = await userModel.findOne({ email: emailLower, deletedAt: null });
     if (!user) {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
@@ -307,7 +309,12 @@ authController.logout = async (req, res) => {
 authController.updateUser = async (req, res) => {
   try {
     const { _id } = req.params;
-    const { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
+    let { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
+
+    // Normalize email to lowercase if present
+    if (email) {
+      email = email.toLowerCase();
+    }
 
     // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
