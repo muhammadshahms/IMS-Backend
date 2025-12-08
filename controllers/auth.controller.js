@@ -408,7 +408,7 @@ authController.updateAvatar = async (req, res) => {
     }
 
     // Check if Cloudinary storage was used
-    const { isCloudinaryConfigured } = require('../config/multerconfig');
+    const { isCloudinaryConfigured } = require('../config/multer.config');
 
     if (!isCloudinaryConfigured) {
       return res.status(503).json({
