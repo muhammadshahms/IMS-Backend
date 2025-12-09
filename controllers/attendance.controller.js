@@ -722,9 +722,27 @@ attendanceController.getUserHistoryForCalendar = async (req, res) => {
     }
 
     // Get all attendance records for calendar
-    const records = await Att.find(dateFilter)
+    const rawRecords = await Att.find(dateFilter)
       .sort({ createdAt: -1 })
       .lean();
+
+    // Calculate hoursWorked dynamically for records that have 0 but have checkIn/checkOut
+    const records = rawRecords.map(record => {
+      let hoursWorked = record.hoursWorked || 0;
+
+      // If hoursWorked is 0 but both checkIn and checkOut exist, calculate dynamically
+      if (hoursWorked === 0 && record.checkInTime && record.checkOutTime) {
+        const checkIn = new Date(record.checkInTime);
+        const checkOut = new Date(record.checkOutTime);
+        hoursWorked = (checkOut - checkIn) / (1000 * 60 * 60); // Convert ms to hours
+        hoursWorked = Math.round(hoursWorked * 100) / 100; // Round to 2 decimal places
+      }
+
+      return {
+        ...record,
+        hoursWorked
+      };
+    });
 
     // Calculate stats
     const stats = {
