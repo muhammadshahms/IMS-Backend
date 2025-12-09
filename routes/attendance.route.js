@@ -13,6 +13,7 @@ router.get("/shifts", attendanceController.getShiftInfo);
 router.get("/history", attendanceController.getAttendanceHistory);
 router.get("/history/:id", protect, validateObjectId('id'), attendanceController.getUserHistoryById);
 router.get("/history/by-name/:name", attendanceController.getUserHistoryByName);
+router.get("/calendar/:id", protect, validateObjectId('id'), attendanceController.getUserHistoryForCalendar);
 
 // Admin routes
 router.get("/settings", attendanceController.getSettings);

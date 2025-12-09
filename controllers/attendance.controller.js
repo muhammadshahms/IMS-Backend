@@ -699,4 +699,85 @@ attendanceController.updateSettings = async (req, res) => {
   }
 };
 
+// ✅ 12. Get User History For Calendar (all records for calendar view)
+attendanceController.getUserHistoryForCalendar = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { month, year } = req.query;
+
+    if (!id || !isValidObjectId(id)) {
+      return res.status(400).json({ error: "Valid User ID is required" });
+    }
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Build date filter
+    let dateFilter = { user: user._id, deletedAt: null };
+
+    if (month && year) {
+      const startDate = moment.tz({ year: parseInt(year), month: parseInt(month) - 1, day: 1 }, "Asia/Karachi").startOf('month').toDate();
+      const endDate = moment.tz({ year: parseInt(year), month: parseInt(month) - 1, day: 1 }, "Asia/Karachi").endOf('month').toDate();
+      dateFilter.createdAt = { $gte: startDate, $lte: endDate };
+    }
+
+    // Get all attendance records for calendar
+    const records = await Att.find(dateFilter)
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Calculate stats
+    const stats = {
+      totalDays: records.length,
+      present: records.filter(r => r.status === 'Present').length,
+      late: records.filter(r => r.isLate).length,
+      earlyLeave: records.filter(r => r.isEarlyLeave).length,
+      absent: records.filter(r => r.status === 'Absent').length,
+      noCheckout: records.filter(r => r.status?.includes('No Checkout')).length,
+      incomplete: records.filter(r => r.status === 'Incomplete').length,
+    };
+
+    // Calculate total hours
+    const totalHoursResult = await Att.aggregate([
+      {
+        $match: {
+          user: user._id,
+          checkInTime: { $ne: null },
+          checkOutTime: { $ne: null },
+          deletedAt: null,
+          ...(dateFilter.createdAt ? { createdAt: dateFilter.createdAt } : {})
+        }
+      },
+      {
+        $project: {
+          duration: {
+            $divide: [
+              { $subtract: ["$checkOutTime", "$checkInTime"] },
+              1000 * 60 * 60
+            ]
+          }
+        }
+      },
+      { $group: { _id: null, total: { $sum: "$duration" } } }
+    ]);
+
+    stats.totalHours = totalHoursResult.length > 0 ? Math.round(totalHoursResult[0].total * 100) / 100 : 0;
+
+    // Get first record date (user's start date)
+    const firstRecord = await Att.findOne({ user: user._id, deletedAt: null })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    res.json({
+      user: { _id: user._id, name: user.name, email: user.email, shift: user.shift },
+      records,
+      stats,
+      startDate: firstRecord?.createdAt || null
+    });
+  } catch (err) {
+    console.error("Get calendar history error:", err);
+    res.status(500).json({ error: "Internal Server Error", details: err.message });
+  }
+};
+
 module.exports = attendanceController;
