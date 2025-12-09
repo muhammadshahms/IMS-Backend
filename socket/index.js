@@ -51,6 +51,9 @@ const initializeSocket = (server) => {
     io.on('connection', (socket) => {
         console.log(`✅ User connected: ${socket.userId}`);
 
+        // Join user's personal room for direct messages
+        socket.join(socket.userId);
+
         // Join a post room for real-time comment updates
         socket.on('join:post', (postId) => {
             socket.join(`post:${postId}`);
@@ -62,6 +65,16 @@ const initializeSocket = (server) => {
             socket.leave(`post:${postId}`);
             console.log(`User ${socket.userId} left post room: ${postId}`);
         });
+
+        // Typing indicators
+        socket.on('typing', ({ receiverId }) => {
+            socket.to(receiverId).emit('typing', { userId: socket.userId });
+        });
+
+        socket.on('stop_typing', ({ receiverId }) => {
+            socket.to(receiverId).emit('stop_typing', { userId: socket.userId });
+        });
+
 
         socket.on('disconnect', () => {
             console.log(`❌ User disconnected: ${socket.userId}`);

@@ -11,5 +11,6 @@ router.use("/api/admin", adminRoute);
 router.use("/api/attendance", attendanceRoute)
 router.use('/api/comments', commentRoutes);
 router.use('/api/media', mediaRoute);
+router.use('/api/messages', require("./message.route"));
 
 module.exports = router;
