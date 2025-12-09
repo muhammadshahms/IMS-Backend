@@ -126,6 +126,7 @@ commentController.getCommentsByPost = async (req, res) => {
     const { postId } = req.params;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const userId = req.user?.id;
 
     // Get all comments for the post (not just root comments)
     // We need all comments to build the tree
@@ -135,8 +136,36 @@ commentController.getCommentsByPost = async (req, res) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    // Get like counts and user like status for all comments
+    const likeModel = require('../models/like.model');
+    const commentIds = allComments.map(c => c._id);
+
+    // Get like counts for all comments
+    const likeCounts = await likeModel.aggregate([
+      { $match: { comment: { $in: commentIds } } },
+      { $group: { _id: '$comment', count: { $sum: 1 } } }
+    ]);
+    const likeCountMap = new Map(likeCounts.map(lc => [lc._id.toString(), lc.count]));
+
+    // Get user's likes if logged in
+    let userLikedMap = new Map();
+    if (userId) {
+      const userLikes = await likeModel.find({
+        comment: { $in: commentIds },
+        user: userId
+      }).lean();
+      userLikedMap = new Map(userLikes.map(ul => [ul.comment.toString(), true]));
+    }
+
+    // Add likeCount and userLiked to each comment
+    const commentsWithLikes = allComments.map(comment => ({
+      ...comment,
+      likeCount: likeCountMap.get(comment._id.toString()) || 0,
+      userLiked: userLikedMap.get(comment._id.toString()) || false
+    }));
+
     // Build comment tree
-    const commentTree = await buildCommentTree(allComments);
+    const commentTree = await buildCommentTree(commentsWithLikes);
 
     // Paginate only the root comments
     const startIndex = (page - 1) * limit;
