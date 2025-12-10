@@ -1,5 +1,5 @@
 const userModel = require("../models/user.model");
-const LoginActivity = require("../models/loginActivity.model");
+const Activity = require("../models/activity.model");
 const bcrypt = require("bcrypt");
 const { UsertokenGenerator } = require("../utils/token.util");
 const paginate = require("../utils/paginate.util");
@@ -17,10 +17,10 @@ const isValidObjectId = (id) => {
 const logActivity = async (userId, action, req, sessionId = null) => {
   try {
     const { getDeviceAndLocationInfo } = require("../utils/deviceDetector.util");
-    
+
     // Get all device and location info
     const info = await getDeviceAndLocationInfo(req);
-    
+
     const activityData = {
       userId,
       action,
@@ -32,8 +32,8 @@ const logActivity = async (userId, action, req, sessionId = null) => {
       timestamp: new Date()
     };
 
-    await LoginActivity.create(activityData);
-    
+    await Activity.create(activityData);
+
     console.log(`✅ Activity logged: ${action} for user ${userId} from ${info.location.city}, ${info.device.platform}`);
   } catch (error) {
     console.error('❌ Error logging activity:', error);
@@ -208,7 +208,9 @@ authController.loginPost = async (req, res) => {
 
     res.cookie("token", accessToken, accessTokenCookieOptions);
 
-    // 🔥 LOG LOGIN ACTIVITY
+    // 🔥 LOG LOGIN ACTIVITY & GET DEVICE INFO
+    const { getDeviceAndLocationInfo } = require("../utils/deviceDetector.util");
+    const deviceInfo = await getDeviceAndLocationInfo(req);
     await logActivity(user._id, 'login', req, sessionId);
 
     res.status(200).json({
@@ -222,6 +224,11 @@ authController.loginPost = async (req, res) => {
         bq_id: user.bq_id,
         avatar: user.avatar
       },
+      loginInfo: {
+        device: deviceInfo.device,
+        location: deviceInfo.location,
+        ip: deviceInfo.ip
+      }
     });
   } catch (error) {
     console.error('Error logging in:', error);
@@ -298,7 +305,7 @@ authController.logout = async (req, res) => {
     if (req.user && req.user.id) {
       // 🔥 LOG LOGOUT ACTIVITY
       await logActivity(req.user.id, 'logout', req);
-      
+
       await userModel.findByIdAndUpdate(req.user.id, { refreshToken: undefined });
     }
 
@@ -318,8 +325,8 @@ authController.logout = async (req, res) => {
   }
 };
 
-// ✅ Get Login Activities (NEW ENDPOINT)
-authController.getLoginActivities = async (req, res) => {
+// ✅ Get Activities
+authController.getActivities = async (req, res) => {
   try {
     const { userId, action, deviceType, startDate, endDate } = req.query;
     const page = parseInt(req.query.page) || 1;
@@ -356,7 +363,7 @@ authController.getLoginActivities = async (req, res) => {
     }
 
     const result = await paginate({
-      model: LoginActivity,
+      model: Activity,
       page,
       limit,
       query,
@@ -369,7 +376,7 @@ authController.getLoginActivities = async (req, res) => {
 
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching login activities:', error);
+    console.error('Error fetching activities:', error);
     res.status(500).json({ message: 'Server Error', details: error.message });
   }
 };
@@ -378,7 +385,7 @@ authController.getLoginActivities = async (req, res) => {
 authController.getActiveUsers = async (req, res) => {
   try {
     // Get all recent login activities
-    const recentActivities = await LoginActivity.find({
+    const recentActivities = await Activity.find({
       timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
     }).sort({ timestamp: -1 });
 
@@ -387,7 +394,7 @@ authController.getActiveUsers = async (req, res) => {
 
     for (const activity of recentActivities) {
       const userId = activity.userId.toString();
-      
+
       if (activity.action === 'login') {
         if (!activeUsers.has(userId)) {
           activeUsers.set(userId, {

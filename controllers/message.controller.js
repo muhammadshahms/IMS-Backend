@@ -83,7 +83,8 @@ exports.getConversations = async (req, res) => {
             participants: senderId,
         })
             .populate("participants", "name avatar email") // Populate participant details
-            .populate("lastMessage");
+            .populate("lastMessage")
+            .sort({ updatedAt: -1 }); // Latest conversations first
 
         res.status(200).json(conversations);
     } catch (error) {
