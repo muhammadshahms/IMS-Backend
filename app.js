@@ -40,7 +40,7 @@ app.use(
       process.env.ADMIN_URL,
       process.env.LOCALHOST_URL,
       process.env.USER_URL,
-      "https://bqims.vercel.app", // Production frontend URL
+      // "https://bqims.vercel.app", // Production frontend URL
     ].filter(Boolean),
     credentials: true,
   })
