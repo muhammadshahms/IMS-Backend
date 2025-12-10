@@ -13,37 +13,30 @@ const isValidObjectId = (id) => {
   return mongoose.Types.ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id);
 };
 
-// ✅ Helper function to log activity
+// ✅ Helper function to log activity (IMPROVED)
 const logActivity = async (userId, action, req, sessionId = null) => {
   try {
-    const userAgent = req.headers['user-agent'] || '';
-    const ip = getClientIP(req);
+    const { getDeviceAndLocationInfo } = require("../utils/deviceDetector.util");
     
-    // Parse device info
-    const deviceInfo = parseUserAgent(userAgent);
-    
-    // Get location (async, but we don't wait for it to complete login)
-    const locationPromise = getLocationFromIP(ip);
+    // Get all device and location info
+    const info = await getDeviceAndLocationInfo(req);
     
     const activityData = {
       userId,
       action,
-      device: deviceInfo,
-      ip,
-      userAgent,
+      device: info.device,
+      ip: info.ip,
+      location: info.location,
+      userAgent: info.userAgent,
       sessionId,
       timestamp: new Date()
     };
 
-    // Wait for location data
-    const location = await locationPromise;
-    activityData.location = location;
-
     await LoginActivity.create(activityData);
     
-    console.log(`Activity logged: ${action} for user ${userId}`);
+    console.log(`✅ Activity logged: ${action} for user ${userId} from ${info.location.city}, ${info.device.platform}`);
   } catch (error) {
-    console.error('Error logging activity:', error);
+    console.error('❌ Error logging activity:', error);
     // Don't throw error - login should still work even if logging fails
   }
 };
