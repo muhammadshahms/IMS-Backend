@@ -1,8 +1,10 @@
 const userModel = require("../models/user.model");
+const LoginActivity = require("../models/loginActivity.model");
 const bcrypt = require("bcrypt");
 const { UsertokenGenerator } = require("../utils/token.util");
 const paginate = require("../utils/paginate.util");
 const mongoose = require("mongoose");
+const { parseUserAgent, getClientIP, getLocationFromIP } = require("../utils/deviceDetector.util");
 
 const authController = {};
 
@@ -11,20 +13,46 @@ const isValidObjectId = (id) => {
   return mongoose.Types.ObjectId.isValid(id) && /^[0-9a-fA-F]{24}$/.test(id);
 };
 
+// ✅ Helper function to log activity (IMPROVED)
+const logActivity = async (userId, action, req, sessionId = null) => {
+  try {
+    const { getDeviceAndLocationInfo } = require("../utils/deviceDetector.util");
+    
+    // Get all device and location info
+    const info = await getDeviceAndLocationInfo(req);
+    
+    const activityData = {
+      userId,
+      action,
+      device: info.device,
+      ip: info.ip,
+      location: info.location,
+      userAgent: info.userAgent,
+      sessionId,
+      timestamp: new Date()
+    };
+
+    await LoginActivity.create(activityData);
+    
+    console.log(`✅ Activity logged: ${action} for user ${userId} from ${info.location.city}, ${info.device.platform}`);
+  } catch (error) {
+    console.error('❌ Error logging activity:', error);
+    // Don't throw error - login should still work even if logging fails
+  }
+};
+
 // ✅ Signup - Create new user
 authController.signupPost = async (req, res) => {
   try {
     const { bq_id, name, email, password, phone, CNIC, course, gender, shift, dob, termsAccepted } = req.validatedData;
 
-    // Check if BQ ID already exists
     const existingbq_id = await userModel.findOne({ bq_id });
     if (existingbq_id) {
       return res.status(400).json({
-        errors: { bq_id: "This BQ Id is not available, please try another" } // Standardized error format
+        errors: { bq_id: "This BQ Id is not available, please try another" }
       });
     }
 
-    // Check if email already exists
     const existingUser = await userModel.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -32,7 +60,6 @@ authController.signupPost = async (req, res) => {
       });
     }
 
-    // Check if CNIC already exists
     const existingCNIC = await userModel.findOne({ CNIC });
     if (existingCNIC) {
       return res.status(400).json({
@@ -40,7 +67,6 @@ authController.signupPost = async (req, res) => {
       });
     }
 
-    // Validate Age > 12
     const dobDate = new Date(dob);
     const today = new Date();
     let age = today.getFullYear() - dobDate.getFullYear();
@@ -55,11 +81,9 @@ authController.signupPost = async (req, res) => {
       });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hash = await bcrypt.hash(password, salt);
 
-    // Create user
     await userModel.create({
       bq_id,
       name,
@@ -109,8 +133,8 @@ authController.signupGet = async (req, res) => {
       model: userModel,
       page,
       limit,
-      query: { deletedAt: null }, // get all non-deleted users
-      sort: { createdAt: -1, _id: 1 }, // latest users first
+      query: { deletedAt: null },
+      sort: { createdAt: -1, _id: 1 },
       populate: null
     });
 
@@ -122,7 +146,7 @@ authController.signupGet = async (req, res) => {
   }
 };
 
-// ✅ Login - FIXED: Supports Refresh Token
+// ✅ Login - WITH ACTIVITY TRACKING
 authController.loginPost = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -143,54 +167,40 @@ authController.loginPost = async (req, res) => {
       return res.status(400).json({ message: 'Invalid Email or Password' });
     }
 
-    // Generate short-lived Access Token (e.g. 15 mins or 1 hour)
-    // UsertokenGenerator should ideally create a token with shorter expiry now, or we can explicitly pass it if the utility allows.
-    // Assuming UsertokenGenerator creates a standard JWT.
+    // Generate tokens
     const accessToken = UsertokenGenerator(user);
+    const crypto = require('crypto');
+    const sessionId = crypto.randomBytes(16).toString('hex');
 
-    // Default cookie options for Access Token (Session or Short-Lived)
     const accessTokenCookieOptions = {
-      httpOnly: false, // Accessible by JS for socket if needed, or httpOnly if handled via API only.
-      // NOTE: Original code had httpOnly: true, but client code reads it from storage?
-      // Actually client stores it in localStorage/sessionStorage from response body.
-      // The cookie set here is primarily for standard web requests if API relies on it.
-      // Let's keep it httpOnly for security where possible.
-      // But wait, client socket.io auth uses localStorage token.
-      // So this cookie is secondary or for SSR/API.
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 24 * 60 * 60 * 1000 // 1 day default for access token cookie if not remember
+      maxAge: 24 * 60 * 60 * 1000
     };
 
     let refreshToken = null;
 
     if (req.body.remember) {
-      // Generate Refresh Token
-      const crypto = require('crypto');
       refreshToken = crypto.randomBytes(40).toString('hex');
 
-      // Hash token before saving to DB
       const hashedRefreshToken = crypto
         .createHash('sha256')
         .update(refreshToken)
         .digest('hex');
 
-      // Save to User
       user.refreshToken = hashedRefreshToken;
       await user.save();
 
-      // Set Refresh Token Cookie (Long Lived - e.g. 30 days)
       const refreshCookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        maxAge: 30 * 24 * 60 * 60 * 1000
       };
 
       res.cookie("refreshToken", refreshToken, refreshCookieOptions);
     } else {
-      // If not remember me, ensure we clear any existing refresh token
       user.refreshToken = undefined;
       await user.save();
       res.clearCookie("refreshToken");
@@ -198,9 +208,13 @@ authController.loginPost = async (req, res) => {
 
     res.cookie("token", accessToken, accessTokenCookieOptions);
 
+    // 🔥 LOG LOGIN ACTIVITY
+    await logActivity(user._id, 'login', req, sessionId);
+
     res.status(200).json({
       message: "Login successful",
       token: accessToken,
+      sessionId,
       user: {
         _id: user._id,
         email: user.email,
@@ -236,10 +250,8 @@ authController.refreshAccessToken = async (req, res) => {
       return res.status(403).json({ message: "Invalid refresh token" });
     }
 
-    // Generate new Access Token
     const accessToken = UsertokenGenerator(user);
 
-    // Update Access Token Cookie
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
@@ -261,7 +273,7 @@ authController.loginGet = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const user = await userModel.findById(userId).select('-password'); // Exclude password
+    const user = await userModel.findById(userId).select('-password');
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -280,12 +292,13 @@ authController.loginGet = async (req, res) => {
   }
 };
 
-// ✅ Logout
+// ✅ Logout - WITH ACTIVITY TRACKING
 authController.logout = async (req, res) => {
   try {
-    // If user is authenticated, clear their refresh token from DB
-    // Note: req.user might not be populated if the token is invalid/expired, so we wrap in try/catch or check
     if (req.user && req.user.id) {
+      // 🔥 LOG LOGOUT ACTIVITY
+      await logActivity(req.user.id, 'logout', req);
+      
       await userModel.findByIdAndUpdate(req.user.id, { refreshToken: undefined });
     }
 
@@ -305,18 +318,125 @@ authController.logout = async (req, res) => {
   }
 };
 
-// ✅ Update user - FIXED: Added validation and duplicate checks
+// ✅ Get Login Activities (NEW ENDPOINT)
+authController.getLoginActivities = async (req, res) => {
+  try {
+    const { userId, action, deviceType, startDate, endDate } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+
+    const query = {};
+
+    // Filter by user (admin can see all, user can see only their own)
+    if (userId) {
+      if (!isValidObjectId(userId)) {
+        return res.status(400).json({ error: "Invalid User ID" });
+      }
+      query.userId = userId;
+    } else if (!req.user.isAdmin) {
+      // If not admin, only show their own activities
+      query.userId = req.user.id;
+    }
+
+    // Filter by action type
+    if (action && ['login', 'logout'].includes(action)) {
+      query.action = action;
+    }
+
+    // Filter by device type
+    if (deviceType && ['desktop', 'mobile', 'tablet'].includes(deviceType)) {
+      query['device.type'] = deviceType;
+    }
+
+    // Filter by date range
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) query.timestamp.$lte = new Date(endDate);
+    }
+
+    const result = await paginate({
+      model: LoginActivity,
+      page,
+      limit,
+      query,
+      sort: { timestamp: -1 },
+      populate: {
+        path: 'userId',
+        select: 'name email bq_id avatar'
+      }
+    });
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error('Error fetching login activities:', error);
+    res.status(500).json({ message: 'Server Error', details: error.message });
+  }
+};
+
+// ✅ Get Currently Active Users (NEW ENDPOINT)
+authController.getActiveUsers = async (req, res) => {
+  try {
+    // Get all recent login activities
+    const recentActivities = await LoginActivity.find({
+      timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+    }).sort({ timestamp: -1 });
+
+    // Track which users are currently logged in
+    const activeUsers = new Map();
+
+    for (const activity of recentActivities) {
+      const userId = activity.userId.toString();
+      
+      if (activity.action === 'login') {
+        if (!activeUsers.has(userId)) {
+          activeUsers.set(userId, {
+            userId: activity.userId,
+            loginTime: activity.timestamp,
+            device: activity.device,
+            ip: activity.ip,
+            location: activity.location
+          });
+        }
+      } else if (activity.action === 'logout') {
+        activeUsers.delete(userId);
+      }
+    }
+
+    // Populate user details
+    const activeUserIds = Array.from(activeUsers.keys());
+    const users = await userModel.find({
+      _id: { $in: activeUserIds }
+    }).select('name email bq_id avatar');
+
+    const result = users.map(user => {
+      const activityData = activeUsers.get(user._id.toString());
+      return {
+        user,
+        ...activityData
+      };
+    });
+
+    res.status(200).json({
+      count: result.length,
+      activeUsers: result
+    });
+  } catch (error) {
+    console.error('Error fetching active users:', error);
+    res.status(500).json({ message: 'Server Error', details: error.message });
+  }
+};
+
+// ✅ Update user
 authController.updateUser = async (req, res) => {
   try {
     const { _id } = req.params;
     let { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
 
-    // Normalize email to lowercase if present
     if (email) {
       email = email.toLowerCase();
     }
 
-    // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -325,17 +445,15 @@ authController.updateUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid User ID format" });
     }
 
-    // Check if user exists
     const user = await userModel.findById(_id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Check if new email is already taken by another user
     if (email && email !== user.email) {
       const existingEmail = await userModel.findOne({
         email,
-        _id: { $ne: _id } // Exclude current user
+        _id: { $ne: _id }
       });
       if (existingEmail) {
         return res.status(400).json({
@@ -345,7 +463,6 @@ authController.updateUser = async (req, res) => {
       }
     }
 
-    // Check if new BQ ID is already taken by another user
     if (bq_id && bq_id !== user.bq_id) {
       const existingBqId = await userModel.findOne({
         bq_id,
@@ -359,7 +476,6 @@ authController.updateUser = async (req, res) => {
       }
     }
 
-    // Update user
     await userModel.findByIdAndUpdate(
       _id,
       { bq_id, name, email, phone, CNIC, course, gender, shift },
@@ -373,12 +489,11 @@ authController.updateUser = async (req, res) => {
   }
 };
 
-// ✅ Delete user - FIXED: Added validation
+// ✅ Delete user
 authController.deleteUser = async (req, res) => {
   try {
     const { _id } = req.params;
 
-    // Validate ObjectId
     if (!_id || _id === 'undefined' || _id === 'null') {
       return res.status(400).json({ error: "User ID is required" });
     }
@@ -387,7 +502,6 @@ authController.deleteUser = async (req, res) => {
       return res.status(400).json({ error: "Invalid User ID format" });
     }
 
-    // Soft delete user
     const deleted = await userModel.findByIdAndUpdate(
       _id,
       { deletedAt: new Date() },
@@ -414,7 +528,6 @@ authController.updateAvatar = async (req, res) => {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    // Check if Cloudinary storage was used
     const { isCloudinaryConfigured } = require('../config/multer.config');
 
     if (!isCloudinaryConfigured) {
@@ -424,15 +537,12 @@ authController.updateAvatar = async (req, res) => {
       });
     }
 
-    const avatarUrl = req.file.path; // Cloudinary URL
+    const avatarUrl = req.file.path;
 
-    // Import media controller for helper functions
     const mediaController = require('./media.controller');
 
-    // Delete old avatar if exists
     await mediaController.deleteOldAvatar(userId);
 
-    // Create new media record for avatar
     await mediaController.createMediaRecord({
       url: avatarUrl,
       publicId: req.file.filename,
@@ -441,7 +551,6 @@ authController.updateAvatar = async (req, res) => {
       file: req.file,
     });
 
-    // Update user avatar field
     const updatedUser = await userModel.findByIdAndUpdate(
       userId,
       { avatar: avatarUrl },
