@@ -20,6 +20,9 @@ router.put("/update/:_id", validate(updateRegisterSchema), authController.update
 router.delete("/delete/:_id", authController.deleteUser)
 router.get("/enums", authController.getenums)
 
+
+router.get('/activities', protect, authController.getLoginActivities);
+router.get('/active-users', protect, authController.getActiveUsers);
 // Avatar upload route
 router.post("/avatar", protect, uploadAvatar.single('avatar'), authController.updateAvatar);
 
