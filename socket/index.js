@@ -8,9 +8,7 @@ const initializeSocket = (server) => {
     io = new Server(server, {
         cors: {
             origin: [
-                process.env.FRONTEND_URL,
                 process.env.ADMIN_URL,
-                process.env.LOCALHOST_URL,
                 process.env.USER_URL,
             ].filter(Boolean),
             credentials: true,

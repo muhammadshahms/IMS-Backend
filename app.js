@@ -36,11 +36,8 @@ console.log("✅ Socket.IO initialized");
 app.use(
   cors({
     origin: [
-      process.env.FRONTEND_URL,
       process.env.ADMIN_URL,
-      process.env.LOCALHOST_URL,
       process.env.USER_URL,
-      // "https://bqims.vercel.app", // Production frontend URL
     ].filter(Boolean),
     credentials: true,
   })
