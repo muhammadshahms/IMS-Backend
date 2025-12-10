@@ -38,6 +38,7 @@ app.use(
     origin: [
       process.env.ADMIN_URL,
       process.env.USER_URL,
+      process.env.LOCAL_URL,
     ].filter(Boolean),
     credentials: true,
   })
