@@ -326,6 +326,7 @@ authController.logout = async (req, res) => {
 };
 
 // ✅ Get Activities
+// ✅ Get Activities (FIXED)
 authController.getActivities = async (req, res) => {
   try {
     const { userId, action, deviceType, startDate, endDate } = req.query;
@@ -340,8 +341,11 @@ authController.getActivities = async (req, res) => {
         return res.status(400).json({ error: "Invalid User ID" });
       }
       query.userId = userId;
-    } else if (!req.user.isAdmin) {
+    } else if (req.user && !req.user.isAdmin) {
       // If not admin, only show their own activities
+      query.userId = req.user.id;
+    } else if (req.user) {
+      // User is logged in
       query.userId = req.user.id;
     }
 
@@ -377,10 +381,13 @@ authController.getActivities = async (req, res) => {
     res.status(200).json(result);
   } catch (error) {
     console.error('Error fetching activities:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    res.status(500).json({ 
+      message: 'Server Error', 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
-
 // ✅ Get Currently Active Users (NEW ENDPOINT)
 authController.getActiveUsers = async (req, res) => {
   try {
