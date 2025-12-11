@@ -58,6 +58,10 @@ app.use("/", indexRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/likes", likeRoute);
 
+// Global Error Handler (MUST be last)
+const errorMiddleware = require("./middlewares/error.middleware");
+app.use(errorMiddleware);
+
 // Server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

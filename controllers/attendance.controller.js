@@ -127,7 +127,8 @@ const calculateStatus = (checkInTime, checkOutTime, shiftConfig, now) => {
 };
 
 // ✅ 1. Check-In
-attendanceController.checkin = async (req, res) => {
+// ✅ 1. Check-In
+attendanceController.checkin = async (req, res, next) => {
   try {
     const { _id } = req.params;
     const settings = await getSettings();
@@ -227,13 +228,13 @@ attendanceController.checkin = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("Check-in error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 2. Check-Out
-attendanceController.checkout = async (req, res) => {
+// ✅ 2. Check-Out
+attendanceController.checkout = async (req, res, next) => {
   try {
     const { _id } = req.params;
     const settings = await getSettings();
@@ -309,13 +310,13 @@ attendanceController.checkout = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("Check-out error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 3. Get Single User's Today's Status
-attendanceController.getAttendanceStatus = async (req, res) => {
+// ✅ 3. Get Single User's Today's Status
+attendanceController.getAttendanceStatus = async (req, res, next) => {
   try {
     const { _id } = req.params;
     const settings = await getSettings();
@@ -382,13 +383,13 @@ attendanceController.getAttendanceStatus = async (req, res) => {
       canCheckIn: false
     });
   } catch (err) {
-    console.error("Get status error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 4. Get All Users' Today's Status
-attendanceController.getAllUserStatus = async (req, res) => {
+// ✅ 4. Get All Users' Today's Status
+attendanceController.getAllUserStatus = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -446,13 +447,13 @@ attendanceController.getAllUserStatus = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Error fetching statuses:", error);
-    res.status(500).json({ error: "Internal Server Error", details: error.message });
+    next(error);
   }
 };
 
 // ✅ 5. Get Full Attendance History
-attendanceController.getAttendanceHistory = async (req, res) => {
+// ✅ 5. Get Full Attendance History
+attendanceController.getAttendanceHistory = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -467,14 +468,15 @@ attendanceController.getAttendanceHistory = async (req, res) => {
     });
 
     res.status(200).json(result);
+    res.status(200).json(result);
   } catch (err) {
-    console.error("Get history error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 6. Get User History By Name
-attendanceController.getUserHistoryByName = async (req, res) => {
+// ✅ 6. Get User History By Name
+attendanceController.getUserHistoryByName = async (req, res, next) => {
   try {
     const { name } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -502,13 +504,13 @@ attendanceController.getUserHistoryByName = async (req, res) => {
       pagination: result.pagination
     });
   } catch (err) {
-    console.error("Get user history by name error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 7. Get User History By ID
-attendanceController.getUserHistoryById = async (req, res) => {
+// ✅ 7. Get User History By ID
+attendanceController.getUserHistoryById = async (req, res, next) => {
   try {
     const { id } = req.params;
     const page = parseInt(req.query.page) || 1;
@@ -561,13 +563,13 @@ attendanceController.getUserHistoryById = async (req, res) => {
       totalHours: Math.round(totalHours * 100) / 100
     });
   } catch (err) {
-    console.error("Get user history by ID error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 8. Update Attendance Record (Admin)
-attendanceController.updateAttendanceRecord = async (req, res) => {
+// ✅ 8. Update Attendance Record (Admin)
+attendanceController.updateAttendanceRecord = async (req, res, next) => {
   try {
     const { attendanceId } = req.params;
 
@@ -597,13 +599,13 @@ attendanceController.updateAttendanceRecord = async (req, res) => {
 
     res.json({ message: "Record updated", updated });
   } catch (err) {
-    console.error("Update attendance error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 9. Delete Attendance Record (Soft Delete)
-attendanceController.deleteAttendanceRecord = async (req, res) => {
+// ✅ 9. Delete Attendance Record (Soft Delete)
+attendanceController.deleteAttendanceRecord = async (req, res, next) => {
   try {
     const { attendanceId } = req.params;
 
@@ -620,13 +622,13 @@ attendanceController.deleteAttendanceRecord = async (req, res) => {
 
     res.json({ message: "Attendance record deleted" });
   } catch (err) {
-    console.error("Delete attendance error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 10. Get Shift Info (Frontend)
-attendanceController.getShiftInfo = async (req, res) => {
+// ✅ 10. Get Shift Info (Frontend)
+attendanceController.getShiftInfo = async (req, res, next) => {
   try {
     const settings = await getSettings();
     const now = moment().tz(settings.timezone);
@@ -649,23 +651,22 @@ attendanceController.getShiftInfo = async (req, res) => {
       shifts
     });
   } catch (err) {
-    console.error("Get shift info error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 11. Get/Update Attendance Settings (Admin)
-attendanceController.getSettings = async (req, res) => {
+// ✅ 11. Get/Update Attendance Settings (Admin)
+attendanceController.getSettings = async (req, res, next) => {
   try {
     const settings = await getSettings();
     res.json(settings);
   } catch (err) {
-    console.error("Get settings error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
-attendanceController.updateSettings = async (req, res) => {
+attendanceController.updateSettings = async (req, res, next) => {
   try {
     const updates = req.body;
 
@@ -694,13 +695,13 @@ attendanceController.updateSettings = async (req, res) => {
 
     res.json({ message: "Settings updated", settings });
   } catch (err) {
-    console.error("Update settings error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 
 // ✅ 12. Get User History For Calendar (all records for calendar view)
-attendanceController.getUserHistoryForCalendar = async (req, res) => {
+// ✅ 12. Get User History For Calendar (all records for calendar view)
+attendanceController.getUserHistoryForCalendar = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { month, year } = req.query;
@@ -793,8 +794,7 @@ attendanceController.getUserHistoryForCalendar = async (req, res) => {
       startDate: firstRecord?.createdAt || null
     });
   } catch (err) {
-    console.error("Get calendar history error:", err);
-    res.status(500).json({ error: "Internal Server Error", details: err.message });
+    next(err);
   }
 };
 

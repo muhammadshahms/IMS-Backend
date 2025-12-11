@@ -42,7 +42,7 @@ const logActivity = async (userId, action, req, sessionId = null) => {
 };
 
 // ✅ Signup - Create new user
-authController.signupPost = async (req, res) => {
+authController.signupPost = async (req, res, next) => {
   try {
     const { bq_id, name, email, password, phone, CNIC, course, gender, shift, dob, termsAccepted } = req.validatedData;
 
@@ -100,13 +100,12 @@ authController.signupPost = async (req, res) => {
 
     return res.status(201).json({ message: "Account created successfully" });
   } catch (error) {
-    console.error("Error creating user:", error);
-    return res.status(500).json({ message: "Server Error", details: error.message });
+    next(error);
   }
 };
 
 // ✅ Get enum values for form dropdowns
-authController.getenums = async (req, res) => {
+authController.getenums = async (req, res, next) => {
   try {
     const courseOptions = userModel.schema.path("course").enumValues;
     const genderOptions = userModel.schema.path("gender").enumValues;
@@ -118,13 +117,12 @@ authController.getenums = async (req, res) => {
       shifts: shiftOptions
     });
   } catch (error) {
-    console.error("Error fetching course enums:", error);
-    return res.status(500).json({ message: "Server Error", details: error.message });
+    next(error);
   }
 };
 
 // ✅ Get all users with pagination
-authController.signupGet = async (req, res) => {
+authController.signupGet = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -141,13 +139,12 @@ authController.signupGet = async (req, res) => {
     res.status(200).json(result);
 
   } catch (error) {
-    console.error("Error Fetching Users:", error);
-    res.status(500).json({ message: 'Error Fetching Users', details: error.message });
+    next(error);
   }
 };
 
 // ✅ Login - WITH ACTIVITY TRACKING
-authController.loginPost = async (req, res) => {
+authController.loginPost = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
@@ -231,13 +228,12 @@ authController.loginPost = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error logging in:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
 // ✅ Refresh Access Token
-authController.refreshAccessToken = async (req, res) => {
+authController.refreshAccessToken = async (req, res, next) => {
   try {
     const refreshToken = req.cookies.refreshToken;
 
@@ -270,13 +266,12 @@ authController.refreshAccessToken = async (req, res) => {
 
     res.status(200).json({ accessToken });
   } catch (error) {
-    console.error("Error refreshing token:", error);
-    res.status(500).json({ message: "Server error" });
+    next(error);
   }
 };
 
 // ✅ Get current logged-in user
-authController.loginGet = async (req, res) => {
+authController.loginGet = async (req, res, next) => {
   try {
     const userId = req.user.id;
 
@@ -291,16 +286,12 @@ authController.loginGet = async (req, res) => {
       user,
     });
   } catch (err) {
-    console.error('Error fetching user:', err);
-    return res.status(500).json({
-      message: "Something went wrong",
-      error: err.message,
-    });
+    next(err);
   }
 };
 
 // ✅ Logout - WITH ACTIVITY TRACKING
-authController.logout = async (req, res) => {
+authController.logout = async (req, res, next) => {
   try {
     if (req.user && req.user.id) {
       // 🔥 LOG LOGOUT ACTIVITY
@@ -320,14 +311,13 @@ authController.logout = async (req, res) => {
 
     res.status(200).json({ message: "Logged out successfully" });
   } catch (error) {
-    console.error('Error logging out:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
 // ✅ Get Activities
 // ✅ Get Activities (FIXED)
-authController.getActivities = async (req, res) => {
+authController.getActivities = async (req, res, next) => {
   try {
     const { userId, action, deviceType, startDate, endDate } = req.query;
     const page = parseInt(req.query.page) || 1;
@@ -380,16 +370,11 @@ authController.getActivities = async (req, res) => {
 
     res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching activities:', error);
-    res.status(500).json({ 
-      message: 'Server Error', 
-      details: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    next(error);
   }
 };
 // ✅ Get Currently Active Users (NEW ENDPOINT)
-authController.getActiveUsers = async (req, res) => {
+authController.getActiveUsers = async (req, res, next) => {
   try {
     // Get all recent login activities
     const recentActivities = await Activity.find({
@@ -436,13 +421,12 @@ authController.getActiveUsers = async (req, res) => {
       activeUsers: result
     });
   } catch (error) {
-    console.error('Error fetching active users:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
 // ✅ Update user
-authController.updateUser = async (req, res) => {
+authController.updateUser = async (req, res, next) => {
   try {
     const { _id } = req.params;
     let { bq_id, name, email, phone, CNIC, course, gender, shift } = req.body;
@@ -498,8 +482,7 @@ authController.updateUser = async (req, res) => {
 
     res.status(200).json({ message: "User updated successfully" });
   } catch (error) {
-    console.error('Error updating user:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
@@ -528,8 +511,7 @@ authController.deleteUser = async (req, res) => {
 
     res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
@@ -576,8 +558,7 @@ authController.updateAvatar = async (req, res) => {
       user: updatedUser,
     });
   } catch (error) {
-    console.error('Error updating avatar:', error);
-    res.status(500).json({ message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
