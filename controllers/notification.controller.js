@@ -6,14 +6,15 @@ exports.getNotifications = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
 
-        const notifications = await Notification.find({ recipient: req.user._id })
+        const query = { recipient: req.user.id };
+        const notifications = await Notification.find(query)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .populate('sender', 'name profilePicture username'); // Adjust fields as needed
 
-        const total = await Notification.countDocuments({ recipient: req.user._id });
-        const unreadCount = await Notification.countDocuments({ recipient: req.user._id, isRead: false });
+        const total = await Notification.countDocuments({ recipient: req.user.id });
+        const unreadCount = await Notification.countDocuments({ recipient: req.user.id, isRead: false });
 
         res.status(200).json({
             notifications,

@@ -210,6 +210,33 @@ authController.loginPost = async (req, res, next) => {
     const deviceInfo = await getDeviceAndLocationInfo(req);
     await logActivity(user._id, 'login', req, sessionId);
 
+    // 🔔 Create Login Notification
+    try {
+      const Notification = require('../models/notification.model');
+      const { emitNotification } = require('../socket');
+
+      console.log('🔔 Attempting to create Login Notification for:', user._id);
+      const notification = await Notification.create({
+        recipient: user._id,
+        sender: user._id, // Sender is self for system/login alerts
+        type: 'LOGIN',
+        message: `New login detected from ${deviceInfo.location?.city || 'Unknown Location'}, ${deviceInfo.device?.platform || 'Unknown Device'}`,
+        data: {
+          device: deviceInfo.device,
+          location: deviceInfo.location,
+          ip: deviceInfo.ip
+        }
+      });
+      console.log('✅ Notification created in DB:', notification._id);
+
+      const populatedNotification = await notification.populate('sender', 'name profilePicture username');
+      emitNotification(user._id, populatedNotification);
+      console.log('📡 Notification emitted via socket to:', user._id);
+    } catch (notifError) {
+      console.error('Error creating login notification:', notifError);
+      // Don't fail login if notification fails
+    }
+
     res.status(200).json({
       message: "Login successful",
       token: accessToken,
