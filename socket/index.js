@@ -46,8 +46,23 @@ const initializeSocket = (server) => {
         }
     });
 
+    // Track online users: userId -> Set of socketIds (to handle multiple tabs)
+    const onlineUsers = new Map();
+
     io.on('connection', (socket) => {
         console.log(`✅ User connected: ${socket.userId}`);
+
+        // Track user as online
+        if (!onlineUsers.has(socket.userId)) {
+            onlineUsers.set(socket.userId, new Set());
+        }
+        onlineUsers.get(socket.userId).add(socket.id);
+
+        // Broadcast to everyone that this user is online
+        io.emit('userOnline', socket.userId);
+
+        // Send the list of online users to the newly connected user
+        socket.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
 
         // Join user's personal room for direct messages
         socket.join(socket.userId);
@@ -73,9 +88,30 @@ const initializeSocket = (server) => {
             socket.to(receiverId).emit('stop_typing', { userId: socket.userId });
         });
 
+        // Message Read Status
+        socket.on('messageRead', ({ conversationId, readerId, senderId }) => {
+            // Notify the sender that their message was read
+            socket.to(senderId).emit('messageRead', { conversationId, readerId });
+        });
+
+        // Get Online Users on demand
+        socket.on('getOnlineUsers', () => {
+            socket.emit('getOnlineUsers', Array.from(onlineUsers.keys()));
+        });
 
         socket.on('disconnect', () => {
             console.log(`❌ User disconnected: ${socket.userId}`);
+
+            // Handle offline status
+            if (onlineUsers.has(socket.userId)) {
+                const userSockets = onlineUsers.get(socket.userId);
+                userSockets.delete(socket.id);
+
+                if (userSockets.size === 0) {
+                    onlineUsers.delete(socket.userId);
+                    io.emit('userOffline', socket.userId);
+                }
+            }
         });
     });
 

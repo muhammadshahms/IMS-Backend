@@ -40,7 +40,8 @@ app.use(
       process.env.ADMIN_URL,
       process.env.USER_URL,
       process.env.LOCAL_URL,
-      "https://banoqabil-incubatees.vercel.app"
+      "https://banoqabil-incubatees.vercel.app",
+      "https://ims-frontend-admin.vercel.app",
     ].filter(Boolean),
     credentials: true,
   })
@@ -58,6 +59,10 @@ app.use("/", indexRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/likes", likeRoute);
 app.use("/api/notifications", notificationRoute);
+
+// Global Error Handler (MUST be last)
+const errorMiddleware = require("./middlewares/error.middleware");
+app.use(errorMiddleware);
 
 // Server
 const PORT = process.env.PORT || 3000;
