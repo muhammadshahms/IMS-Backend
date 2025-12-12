@@ -101,6 +101,39 @@ commentController.createComment = async (req, res) => {
       // Continue even if socket fails
     }
 
+    // Create Notification
+    const notificationModel = require("../models/notification.model");
+    const { emitNotification } = require("../socket");
+
+    // Initialize logic to notify post owner
+    if (post.user.toString() !== userId) {
+      const notification = await notificationModel.create({
+        recipient: post.user,
+        sender: userId,
+        type: 'COMMENT',
+        message: 'commented on your post',
+        data: { postId, commentId: newComment._id }
+      });
+      const populatedNotification = await notification.populate('sender', 'name profilePicture username');
+      emitNotification(post.user, populatedNotification);
+    }
+
+    // Identify and notify mentioned users (if any logic existed) or parent comment owner
+    if (parentCommentId) {
+      const parentComment = await commentModel.findById(parentCommentId);
+      if (parentComment && parentComment.user.toString() !== userId && parentComment.user.toString() !== post.user.toString()) {
+        const notification = await notificationModel.create({
+          recipient: parentComment.user,
+          sender: userId,
+          type: 'COMMENT',
+          message: 'replied to your comment',
+          data: { postId, commentId: newComment._id, parentCommentId }
+        });
+        const populatedNotification = await notification.populate('sender', 'name profilePicture username');
+        emitNotification(parentComment.user, populatedNotification);
+      }
+    }
+
     res.status(201).json({
       message: "Comment added successfully",
       comment: populatedComment

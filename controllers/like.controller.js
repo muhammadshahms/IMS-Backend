@@ -77,6 +77,24 @@ likeController.toggleLike = async (req, res) => {
                 likeCount,
             });
 
+            // Create Notification
+            const notificationModel = require("../models/notification.model");
+            const { emitNotification } = require("../socket");
+
+            // Only notify if liking someone else's post
+            if (post.user.toString() !== userId) {
+                const notification = await notificationModel.create({
+                    recipient: post.user,
+                    sender: userId,
+                    type: 'LIKE',
+                    message: 'liked your post',
+                    data: { postId }
+                });
+
+                const populatedNotification = await notification.populate('sender', 'name profilePicture username');
+                emitNotification(post.user, populatedNotification);
+            }
+
             return res.status(201).json({
                 message: "Post liked successfully",
                 liked: true,

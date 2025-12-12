@@ -89,4 +89,10 @@ const getIO = () => {
     return io;
 };
 
-module.exports = { initializeSocket, getIO };
+const emitNotification = (userId, notification) => {
+    if (io) {
+        io.to(userId.toString()).emit('new_notification', notification);
+    }
+};
+
+module.exports = { initializeSocket, getIO, emitNotification };

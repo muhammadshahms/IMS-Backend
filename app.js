@@ -23,6 +23,7 @@ const indexRoute = require("./routes/index.route");
 const commentRoute = require("./routes/comment.route");
 const likeRoute = require("./routes/like.route");
 const { initializeSocket } = require("./socket");
+const notificationRoute = require("./routes/notification.routes");
 require("./config/db.config")();
 const app = express();
 
@@ -56,6 +57,7 @@ app.get("/", (req, res) => res.render("dashboard"));
 app.use("/", indexRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/likes", likeRoute);
+app.use("/api/notifications", notificationRoute);
 
 // Server
 const PORT = process.env.PORT || 3000;
