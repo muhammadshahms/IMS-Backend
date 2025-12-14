@@ -33,7 +33,7 @@ exports.getNotifications = async (req, res) => {
 exports.markAsRead = async (req, res) => {
     try {
         const { id } = req.params;
-        const notification = await Notification.findOne({ _id: id, recipient: req.user._id });
+        const notification = await Notification.findOne({ _id: id, recipient: req.user.id });
 
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });
@@ -53,7 +53,7 @@ exports.markAsRead = async (req, res) => {
 exports.markAllAsRead = async (req, res) => {
     try {
         await Notification.updateMany(
-            { recipient: req.user._id, isRead: false },
+            { recipient: req.user.id, isRead: false },
             { $set: { isRead: true } }
         );
 
@@ -68,7 +68,7 @@ exports.markAllAsRead = async (req, res) => {
 exports.deleteNotification = async (req, res) => {
     try {
         const { id } = req.params;
-        const notification = await Notification.findOneAndDelete({ _id: id, recipient: req.user._id });
+        const notification = await Notification.findOneAndDelete({ _id: id, recipient: req.user.id });
 
         if (!notification) {
             return res.status(404).json({ message: 'Notification not found' });

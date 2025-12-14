@@ -59,6 +59,8 @@ app.use("/", indexRoute);
 app.use("/api/comments", commentRoute);
 app.use("/api/likes", likeRoute);
 app.use("/api/notifications", notificationRoute);
+const pushRoute = require("./routes/push.route");
+app.use("/api/push", pushRoute);
 
 // Global Error Handler (MUST be last)
 const errorMiddleware = require("./middlewares/error.middleware");
