@@ -104,6 +104,7 @@ commentController.createComment = async (req, res) => {
     // Create Notification
     const notificationModel = require("../models/notification.model");
     const { emitNotification } = require("../socket");
+    const { sendPushNotification } = require("./push.controller");
 
     // Initialize logic to notify post owner
     if (post.user.toString() !== userId) {
@@ -116,6 +117,17 @@ commentController.createComment = async (req, res) => {
       });
       const populatedNotification = await notification.populate('sender', 'name profilePicture username');
       emitNotification(post.user, populatedNotification);
+
+      // Send Push Notification
+      const pushPayload = {
+        title: "New Comment",
+        body: `${req.user.name || 'Someone'} commented on your post`,
+        data: {
+          url: `/posts/${postId}`,
+          type: 'comment'
+        }
+      };
+      sendPushNotification(post.user, pushPayload).catch(err => console.error("Push Err:", err));
     }
 
     // Identify and notify mentioned users (if any logic existed) or parent comment owner
@@ -131,6 +143,17 @@ commentController.createComment = async (req, res) => {
         });
         const populatedNotification = await notification.populate('sender', 'name profilePicture username');
         emitNotification(parentComment.user, populatedNotification);
+
+        // Send Push Notification
+        const pushPayload = {
+          title: "New Reply",
+          body: `${req.user.name || 'Someone'} replied to your comment`,
+          data: {
+            url: `/posts/${postId}`,
+            type: 'comment'
+          }
+        };
+        sendPushNotification(parentComment.user, pushPayload).catch(err => console.error("Push Err:", err));
       }
     }
 

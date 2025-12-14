@@ -80,6 +80,7 @@ likeController.toggleLike = async (req, res) => {
             // Create Notification
             const notificationModel = require("../models/notification.model");
             const { emitNotification } = require("../socket");
+            const { sendPushNotification } = require("./push.controller");
 
             // Only notify if liking someone else's post
             if (post.user.toString() !== userId) {
@@ -93,6 +94,17 @@ likeController.toggleLike = async (req, res) => {
 
                 const populatedNotification = await notification.populate('sender', 'name profilePicture username');
                 emitNotification(post.user, populatedNotification);
+
+                // Send Push Notification
+                const pushPayload = {
+                    title: "New Like",
+                    body: `${req.user.name || 'Someone'} liked your post`,
+                    data: {
+                        url: `/posts/${postId}`,
+                        type: 'like'
+                    }
+                };
+                sendPushNotification(post.user, pushPayload).catch(err => console.error("Push Err:", err));
             }
 
             return res.status(201).json({
@@ -173,6 +185,36 @@ likeController.toggleCommentLike = async (req, res) => {
                 },
                 likeCount,
             });
+
+            // Create Notification
+            const notificationModel = require("../models/notification.model");
+            const { emitNotification } = require("../socket");
+            const { sendPushNotification } = require("./push.controller");
+
+            // Notify comment owner if it's not the liker
+            if (comment.user.toString() !== userId) {
+                const notification = await notificationModel.create({
+                    recipient: comment.user,
+                    sender: userId,
+                    type: 'LIKE',
+                    message: 'liked your comment',
+                    data: { postId, commentId }
+                });
+
+                const populatedNotification = await notification.populate('sender', 'name profilePicture username');
+                emitNotification(comment.user, populatedNotification);
+
+                // Send Push Notification
+                const pushPayload = {
+                    title: "New Like",
+                    body: `${req.user.name || 'Someone'} liked your comment`,
+                    data: {
+                        url: `/posts/${postId}`,
+                        type: 'like'
+                    }
+                };
+                sendPushNotification(comment.user, pushPayload).catch(err => console.error("Push Err:", err));
+            }
 
             return res.status(201).json({
                 message: "Comment liked successfully",

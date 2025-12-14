@@ -11,7 +11,7 @@ exports.getNotifications = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
-            .populate('sender', 'name profilePicture username'); // Adjust fields as needed
+            .populate('sender', 'name avatar username'); // Adjust fields as needed
 
         const total = await Notification.countDocuments({ recipient: req.user.id });
         const unreadCount = await Notification.countDocuments({ recipient: req.user.id, isRead: false });

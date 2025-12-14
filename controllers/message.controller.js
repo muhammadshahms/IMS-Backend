@@ -31,10 +31,13 @@ exports.searchUsers = async (req, res) => {
     }
 };
 
+const { sendPushNotification } = require("./push.controller");
+
 exports.sendMessage = async (req, res) => {
     try {
         const { message, receiverId } = req.body;
         const senderId = req.user.id;
+        const senderName = req.user.name; // Assuming user middleware populates name, or need to fetch
 
         let conversation = await Conversation.findOne({
             participants: { $all: [senderId, receiverId] },
@@ -60,13 +63,27 @@ exports.sendMessage = async (req, res) => {
         // Socket.IO logic
         try {
             const io = getIO();
-            // Emit to receiver's room (using their userId)
             io.to(receiverId).emit("newMessage", newMessage);
-            // Emit to sender's room (for consistency if needed, usually frontend handles optimistic UI)
-            // io.to(senderId).emit("newMessage", newMessage);
+
+            // Send Push Notification
+            // We need sender details for the push notification title/body
+            const sender = await User.findById(senderId).select("name");
+            console.log("Preparing push notification for message from:", sender?.name);
+
+            const pushPayload = {
+                title: `New Message from ${sender ? sender.name : 'Unknown'}`,
+                body: message.length > 50 ? message.substring(0, 50) + "..." : message,
+                data: {
+                    url: `/direct?user=${senderId}`, // Deep link to specific chat
+                    type: 'message'
+                }
+            };
+
+            // Send asynchronously, don't await block the response
+            sendPushNotification(receiverId, pushPayload).catch(err => console.error("Push Err:", err));
+
         } catch (socketError) {
             console.error("Socket emit error:", socketError);
-            // Continue execution, don't fail the request just because socket failed
         }
 
         res.status(201).json(newMessage);
@@ -115,6 +132,23 @@ exports.getMessages = async (req, res) => {
         res.status(200).json(messages);
     } catch (error) {
         console.error("Error in getMessages:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+};
+
+exports.markAsRead = async (req, res) => {
+    try {
+        const { conversationId } = req.body;
+        const readerId = req.user.id;
+
+        await Message.updateMany(
+            { conversationId, seenBy: { $ne: readerId } },
+            { $addToSet: { seenBy: readerId } }
+        );
+
+        res.status(200).json({ message: "Messages marked as read" });
+    } catch (error) {
+        console.error("Error in markAsRead:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 };

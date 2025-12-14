@@ -49,6 +49,7 @@ exports.subscribe = async (req, res) => {
 exports.sendPushNotification = async (userId, payload) => {
     try {
         const subscriptions = await Subscription.find({ userId: userId });
+        console.log(`Sending push to user ${userId}, found ${subscriptions.length} subscriptions`);
 
         const notifications = subscriptions.map(sub => {
             const pushSubscription = {
