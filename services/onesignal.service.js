@@ -2,7 +2,7 @@ const axios = require('axios');
 
 // REPLACE THESE WITH YOUR ONESIGNAL CREDENTIALS
 const ONE_SIGNAL_APP_ID = "62b37eb6-08ac-40c0-8099-3ea1d1959dd6";
-const ONE_SIGNAL_API_KEY = "qckrwhxguedz4euae6hxu4drw";
+const ONE_SIGNAL_API_KEY = "os_v2_app_mkzx5nqivrambaezh2q5dfm523qckrwhxguedz4euae6hxu4drw4ul4izsolv2noyq7h5nxblrqm4egeycn6hmvp3fyxwd4mr4fnedi";
 
 /**
  * Send a notification via OneSignal
