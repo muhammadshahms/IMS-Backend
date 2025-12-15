@@ -88,7 +88,11 @@ exports.sendPushNotification = async (userId, payload) => {
                 endpoint: sub.endpoint,
                 keys: sub.keys
             };
-            return webpush.sendNotification(pushSubscription, JSON.stringify(payload))
+            return webpush.sendNotification(pushSubscription, JSON.stringify(payload), {
+                headers: {
+                    'Urgency': 'high'
+                }
+            })
                 .catch(err => {
                     if (err.statusCode === 410 || err.statusCode === 404) {
                         // Subscription is gone, delete it
