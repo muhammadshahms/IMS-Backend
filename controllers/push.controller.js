@@ -3,8 +3,8 @@ const Subscription = require('../models/subscription.model');
 
 // Setup web-push
 // These should ideally be in process.env
-const publicVapidKey = process.env.VAPID_PUBLIC_KEY;
-const privateVapidKey = process.env.VAPID_PRIVATE_KEY;
+const publicVapidKey = process.env.VAPID_PUBLIC_KEY || "BJ5669O9M7D6VrHYv42g-Zlc8oWTNlCVFOheoDxzkKsQVWgkablv74_CD-5SNY48YqitZO-5P_9v1aj6x6jQOnw";
+const privateVapidKey = process.env.VAPID_PRIVATE_KEY || "G4vyFqmNdED-SOvlVHjhJkHJGZhPnmNifZw4Gu-H5hU";
 
 if (publicVapidKey && privateVapidKey) {
     webpush.setVapidDetails(
