@@ -3,7 +3,7 @@ const router = express.Router();
 const authController = require("../controllers/auth.controller")
 const attController = require("../controllers/attendance.controller")
 const validate = require("../middlewares/form-validator.middleware")
-const { registerSchema, updateRegisterSchema } = require("../validators/auth.validation");
+const { registerSchema, updateRegisterSchema, loginSchema } = require("../validators/auth.validation");
 const { protect } = require("../middlewares/auth.middleware");
 const userPostController = require("../controllers/user-post.controller");
 const { uploadPostImage, uploadAvatar } = require("../config/multer.config");
@@ -11,7 +11,7 @@ const { uploadPostImage, uploadAvatar } = require("../config/multer.config");
 //admin access users
 router.get("/signup", authController.signupGet)
 router.post("/signup", validate(registerSchema), authController.signupPost)
-router.post("/login", authController.loginPost)
+router.post("/login", validate(loginSchema), authController.loginPost)
 router.get("/profile", protect, authController.loginGet)
 router.post("/refresh-token", authController.refreshAccessToken)
 

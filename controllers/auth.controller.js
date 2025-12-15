@@ -148,10 +148,6 @@ authController.loginPost = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
-
     const emailLower = email.toLowerCase();
 
     const user = await userModel.findOne({ email: emailLower, deletedAt: null });
