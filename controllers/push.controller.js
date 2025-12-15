@@ -45,6 +45,36 @@ exports.subscribe = async (req, res) => {
     }
 };
 
+exports.sendTestPush = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const payload = {
+            title: 'Test Notification',
+            body: 'This is a test notification from the server!',
+            icon: '/icon.png'
+        };
+
+        const subscriptions = await Subscription.find({ userId: userId });
+        if (subscriptions.length === 0) {
+            return res.status(404).json({ message: 'No subscriptions found for user' });
+        }
+
+        const notifications = subscriptions.map(sub => {
+            const pushSubscription = {
+                endpoint: sub.endpoint,
+                keys: sub.keys
+            };
+            return webpush.sendNotification(pushSubscription, JSON.stringify(payload));
+        });
+
+        await Promise.all(notifications);
+        res.status(200).json({ message: `Sent test push to ${subscriptions.length} subscriptions` });
+    } catch (error) {
+        console.error('Error sending test push:', error);
+        res.status(500).json({ message: 'Failed to send test push', error: error.message });
+    }
+};
+
 // Internal/Test function to send push
 exports.sendPushNotification = async (userId, payload) => {
     try {
