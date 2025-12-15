@@ -119,9 +119,12 @@ commentController.createComment = async (req, res) => {
       emitNotification(post.user, populatedNotification);
 
       // Send Push Notification
+      const sender = await require("../models/user.model").findById(req.user.id).select("name avatar");
       const pushPayload = {
         title: "New Comment",
-        body: `${req.user.name || 'Someone'} commented on your post`,
+        body: `${sender ? sender.name : 'Someone'} commented on your post`,
+        icon: sender?.avatar,
+        tag: 'comment',
         data: {
           url: `/posts/${postId}`,
           type: 'comment'
@@ -145,9 +148,12 @@ commentController.createComment = async (req, res) => {
         emitNotification(parentComment.user, populatedNotification);
 
         // Send Push Notification
+        const sender = await require("../models/user.model").findById(req.user.id).select("name avatar");
         const pushPayload = {
           title: "New Reply",
-          body: `${req.user.name || 'Someone'} replied to your comment`,
+          body: `${sender ? sender.name : 'Someone'} replied to your comment`,
+          icon: sender?.avatar,
+          tag: 'comment',
           data: {
             url: `/posts/${postId}`,
             type: 'comment'

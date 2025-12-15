@@ -67,12 +67,14 @@ exports.sendMessage = async (req, res) => {
 
             // Send Push Notification
             // We need sender details for the push notification title/body
-            const sender = await User.findById(senderId).select("name");
+            const sender = await User.findById(senderId).select("name avatar");
             console.log("Preparing push notification for message from:", sender?.name);
 
             const pushPayload = {
                 title: `New Message from ${sender ? sender.name : 'Unknown'}`,
                 body: message.length > 50 ? message.substring(0, 50) + "..." : message,
+                icon: sender?.avatar,
+                tag: 'message',
                 data: {
                     url: `/direct?user=${senderId}`, // Deep link to specific chat
                     type: 'message'

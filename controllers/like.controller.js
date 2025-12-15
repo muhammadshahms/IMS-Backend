@@ -96,9 +96,12 @@ likeController.toggleLike = async (req, res) => {
                 emitNotification(post.user, populatedNotification);
 
                 // Send Push Notification
+                const sender = await require("../models/user.model").findById(req.user.id).select("name avatar");
                 const pushPayload = {
                     title: "New Like",
-                    body: `${req.user.name || 'Someone'} liked your post`,
+                    body: `${sender ? sender.name : 'Someone'} liked your post`,
+                    icon: sender?.avatar,
+                    tag: 'like',
                     data: {
                         url: `/posts/${postId}`,
                         type: 'like'
@@ -205,9 +208,12 @@ likeController.toggleCommentLike = async (req, res) => {
                 emitNotification(comment.user, populatedNotification);
 
                 // Send Push Notification
+                const sender = await require("../models/user.model").findById(req.user.id).select("name avatar");
                 const pushPayload = {
                     title: "New Like",
-                    body: `${req.user.name || 'Someone'} liked your comment`,
+                    body: `${sender ? sender.name : 'Someone'} liked your comment`,
+                    icon: sender?.avatar,
+                    tag: 'like',
                     data: {
                         url: `/posts/${postId}`,
                         type: 'like'

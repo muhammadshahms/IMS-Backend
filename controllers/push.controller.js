@@ -51,7 +51,9 @@ exports.sendTestPush = async (req, res) => {
         const payload = {
             title: 'Test Notification',
             body: 'This is a test notification from the server!',
-            icon: '/icon.png'
+            icon: '/icon.png',
+            tag: 'test',
+            badge: '/icon.png'
         };
 
         const subscriptions = await Subscription.find({ userId: userId });
